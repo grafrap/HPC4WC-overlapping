@@ -6,20 +6,25 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 #include <cuda_runtime.h>
 #include <iostream>
 
+
 #define N 128 * 128
 #define NUM_STREAMS 3
 
-__global__ void compute_kernel(float* d_data, int size, float value) {
+__global__ void compute_kernel(fType* d_data, int size, fType value) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < size) d_data[idx] += value;
 }
 
-int main() {
-    int size = N;
-    size_t bytes = size * sizeof(float);
+void run_arccos(int size, int num_streams) {
+    int size_per_stream = size / NUM_STREAMS;
+    if (size % NUM_STREAMS != 0) {
+        std::cerr << "Size must be divisible by number of streams." << std::endl;
+        return;
+    }
+    size_t bytes = size_per_stream * sizeof(fType);
 
-    float* h_data[NUM_STREAMS], *h_result[NUM_STREAMS];
-    float* d_data[NUM_STREAMS];
+    fType* h_data[NUM_STREAMS], *h_result[NUM_STREAMS];
+    fType* d_data[NUM_STREAMS];
     cudaStream_t streams[NUM_STREAMS];
 
     // Allocate host and device memory, create streams
@@ -37,40 +42,43 @@ int main() {
         cudaMalloc(&d_data[i], bytes);
         cudaStreamCreate(&streams[i]);
 
-        for (int j = 0; j < size; ++j) h_data[i][j] = static_cast<float>(j);
+        // for (int j = 0; j < size; ++j) h_data[i][j] = static_cast<fType>(j);
+        init_h_data(h_data[i], size_per_stream); // Initialize host data
     }
 
     int threads = 256;
-    int blocks = (size + threads - 1) / threads;
+    int blocks = (size_per_stream + threads - 1) / threads;
 
     // Launch operations in streams
-    for (int i = 0; i < NUM_STREAMS; ++i) {
-        cudaMemcpyAsync(d_data[i], h_data[i], bytes, cudaMemcpyHostToDevice, streams[i]); // HDx
-        compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], size, 1.0f);         // Kx
-        cudaError_t err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
-            return 1;
-        }
-        cudaMemcpyAsync(h_result[i], d_data[i], bytes, cudaMemcpyDeviceToHost, streams[i]); // DHx
-    }
+    run_stream_operations(h_data, h_result, d_data, streams, size_per_stream, num_streams);
+    // for (int i = 0; i < num_streams; ++i) {
+    //     cudaMemcpyAsync(d_data[i], h_data[i], bytes, cudaMemcpyHostToDevice, streams[i]); // HDx
+    //     compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], size, 1.0f);         // Kx
+    //     cudaError_t err = cudaGetLastError();
+    //     if (err != cudaSuccess) {
+    //         std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
+    //         return 1;
+    //     }
+    //     cudaMemcpyAsync(h_result[i], d_data[i], bytes, cudaMemcpyDeviceToHost, streams[i]); // DHx
+    // }
 
     // Wait for all streams to finish
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
 
     // Verify result
-    for (int i = 0; i < NUM_STREAMS; ++i) {
-        bool correct = true;
-        for (int j = 0; j < size; ++j) {
-            if (h_result[i][j] != h_data[i][j] + 1.0f) {
-                correct = false;
-                std::cout << "Mismatch at index " << j << " in stream " << i << ": "
-                          << h_result[i][j] << " != " << h_data[i][j] + 1.0f << std::endl;
-                break;
-            }
-        }
-        std::cout << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
-    }
+    verify_result(h_result, size_per_stream, num_streams);
+    // for (int i = 0; i < num_streams; ++i) {
+    //     bool correct = true;
+    //     for (int j = 0; j < size_per_stream; ++j) {
+    //         if (h_result[i][j] != h_data[i][j] + 1.0f) {
+    //             correct = false;
+    //             std::cout << "Mismatch at index " << j << " in stream " << i << ": "
+    //                       << h_result[i][j] << " != " << h_data[i][j] + 1.0f << std::endl;
+    //             break;
+    //         }
+    //     }
+    //     std::cout << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
+    // }
 
     // Cleanup
     for (int i = 0; i < NUM_STREAMS; ++i) {
@@ -80,5 +88,25 @@ int main() {
         cudaStreamDestroy(streams[i]);
     }
 
-    return 0;
 }
+
+// Function to initialize host data from refrence data
+void init_h_data(float* h_data, int size){
+
+}
+
+// Function to initialize result from reference data (arccos values)
+void init_ref_result(float* ref_result, int size) {
+
+}
+
+// Run stream operations
+void run_stream_operations(float* h_data[], float* h_result[], float* d_data[], cudaStream_t streams[], int size_per_stream, int num_streams) {
+
+}
+
+// Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
+void verify_result(float* h_result[], int size_per_stream, int num_streams) {
+
+}
+
