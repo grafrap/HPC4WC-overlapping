@@ -1,3 +1,8 @@
+/*
+Compile as follows:
+nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
+*/
+
 #include <cuda_runtime.h>
 #include <iostream>
 
