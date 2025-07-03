@@ -14,6 +14,7 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 
 
 
+
 #define N 128 * 128
 #define NUM_STREAMS 3
 
@@ -70,6 +71,7 @@ int run_arccos(int size, int num_streams) {
         std::cerr << "Cuda error after running stream operations: " << cudaGetErrorString(err) << std::endl;
         return 1;
     }
+
     run_stream_operations(h_data, h_result, d_data, streams, size_per_stream, num_streams);
     // for (int i = 0; i < num_streams; ++i) {
     //     cudaMemcpyAsync(d_data[i], h_data[i], bytes, cudaMemcpyHostToDevice, streams[i]); // HDx
