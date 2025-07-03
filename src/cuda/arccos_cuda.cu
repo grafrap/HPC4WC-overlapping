@@ -5,13 +5,15 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 
 #include <cuda_runtime.h>
 #include <iostream>
-#include"cnpy.h"
-#include<cstdlib>
-#include<map>
-#include<string>
-#include<cstring>
-#include "arccos_cuda.cuh
-#include<cmath>
+#include <cstdlib>
+#include <map>
+#include <string>
+#include <cstring>
+#include <cmath>
+#include <cassert>
+
+#include "cnpy.h"
+#include "arccos_cuda.cuh"
 
 
 
@@ -67,26 +69,11 @@ int run_arccos(int size, int num_streams) {
     int blocks = (size_per_stream + threads - 1) / threads;
 
     // Launch operations in streams
-    cudaError_t err = run_stream_operations(h_data, h_result, d_data, streams, size_per_stream, num_streams, threads, blocks);
+    cudaError_t err = run_stream_operations(h_data, h_result, d_data, streams, size_per_stream * sizeof(fType), num_streams, threads, blocks);
     if (err != cudaSuccess) {
         std::cerr << "Cuda error after running stream operations: " << cudaGetErrorString(err) << std::endl;
         return 1;
     }
-
-    run_stream_operations(h_data, h_result, d_data, streams, size_per_stream, num_streams);
-    // for (int i = 0; i < num_streams; ++i) {
-    //     cudaMemcpyAsync(d_data[i], h_data[i], bytes, cudaMemcpyHostToDevice, streams[i]); // HDx
-    //     compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], size, 1.0f);         // Kx
-    //     cudaError_t err = cudaGetLastError();
-    //     if (err != cudaSuccess) {
-    //         std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
-    //         return 1;
-    //     }
-    //     cudaMemcpyAsync(h_result[i], d_data[i], bytes, cudaMemcpyDeviceToHost, streams[i]); // DHx
-    // }
-
-    // Wait for all streams to finish
-    // cudaDeviceSynchronize();
 
     // Verify result
     verify_result(h_result, size_per_stream, num_streams);
@@ -128,7 +115,7 @@ void init_h(fType* h_data, fType* h_result, const fType* x, const fType* res, in
 //}
 
 // Run stream operations
-cudaError_t run_stream_operations(float* h_data[], float* h_result[], float* d_data[], cudaStream_t streams[], int bytes_per_stream, int num_streams,
+cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_data[], cudaStream_t streams[], int bytes_per_stream, int num_streams,
                                      int threads, int blocks) {
     // Loop through each stream and perform operations
     for (int i = 0; i < num_streams; ++i) {
@@ -137,7 +124,7 @@ cudaError_t run_stream_operations(float* h_data[], float* h_result[], float* d_d
             std::cerr << "Memcpy (H2D) failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
         }
-        compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], bytes_per_stream, 1.0f);
+        compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], bytes_per_stream);
         err = cudaGetLastError();
         if (err != cudaSuccess) {
             std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
@@ -158,7 +145,7 @@ cudaError_t run_stream_operations(float* h_data[], float* h_result[], float* d_d
 }
 
 // Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
-void verify_result(float* h_result[], int size_per_stream, int num_streams) {
+void verify_result(fType* h_result[], int size_per_stream, int num_streams) {
 
 }
 
