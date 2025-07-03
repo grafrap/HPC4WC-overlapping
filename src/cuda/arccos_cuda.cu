@@ -3,7 +3,7 @@ Compile as follows:
 nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 */
 
-#include <cuda_runtime.h>
+#include "arccos_cuda.cuh"
 #include <iostream>
 
 
@@ -15,7 +15,7 @@ __global__ void compute_kernel(fType* d_data, int size, fType value) {
     if (idx < size) d_data[idx] += value;
 }
 
-void run_arccos(int size, int num_streams) {
+int run_arccos(int size, int num_streams) {
     int size_per_stream = size / NUM_STREAMS;
     if (size % NUM_STREAMS != 0) {
         std::cerr << "Size must be divisible by number of streams." << std::endl;
@@ -50,20 +50,11 @@ void run_arccos(int size, int num_streams) {
     int blocks = (size_per_stream + threads - 1) / threads;
 
     // Launch operations in streams
-    run_stream_operations(h_data, h_result, d_data, streams, size_per_stream, num_streams);
-    // for (int i = 0; i < num_streams; ++i) {
-    //     cudaMemcpyAsync(d_data[i], h_data[i], bytes, cudaMemcpyHostToDevice, streams[i]); // HDx
-    //     compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], size, 1.0f);         // Kx
-    //     cudaError_t err = cudaGetLastError();
-    //     if (err != cudaSuccess) {
-    //         std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
-    //         return 1;
-    //     }
-    //     cudaMemcpyAsync(h_result[i], d_data[i], bytes, cudaMemcpyDeviceToHost, streams[i]); // DHx
-    // }
-
-    // Wait for all streams to finish
-    // cudaDeviceSynchronize();
+    cudaError_t err = run_stream_operations(h_data, h_result, d_data, streams, size_per_stream, num_streams, threads, blocks);
+    if (err != cudaSuccess) {
+        std::cerr << "Cuda error after running stream operations: " << cudaGetErrorString(err) << std::endl;
+        return 1;
+    }
 
     // Verify result
     verify_result(h_result, size_per_stream, num_streams);
@@ -101,8 +92,33 @@ void init_ref_result(float* ref_result, int size) {
 }
 
 // Run stream operations
-void run_stream_operations(float* h_data[], float* h_result[], float* d_data[], cudaStream_t streams[], int size_per_stream, int num_streams) {
+cudaError_t run_stream_operations(float* h_data[], float* h_result[], float* d_data[], cudaStream_t streams[], int bytes_per_stream, int num_streams,
+                                     int threads, int blocks) {
+    // Loop through each stream and perform operations
+    for (int i = 0; i < num_streams; ++i) {
+        cudaError_t err = cudaMemcpyAsync(d_data[i], h_data[i], bytes_per_stream, cudaMemcpyHostToDevice, streams[i]);
+        if (err != cudaSuccess) {
+            std::cerr << "Memcpy (H2D) failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
+            return err;
+        }
+        compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], bytes_per_stream, 1.0f);
+        err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
+            return err;
+        }
+        err = cudaMemcpyAsync(h_result[i], d_data[i], bytes_per_stream, cudaMemcpyDeviceToHost, streams[i]);
+        if (err != cudaSuccess) {
+            std::cerr << "Memcpy (D2H) failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
+            return err;
+        }
+    }
 
+    // Wait for all streams to finish
+    cudaDeviceSynchronize();
+
+    // Check for errors after synchronization
+    return cudaGetLastError();
 }
 
 // Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
