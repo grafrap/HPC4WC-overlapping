@@ -15,6 +15,8 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 #include "cnpy.h"
 #include "arccos_cuda.cuh"
 
+#define TOL 1e-5 // Define a tolerance for floating-point comparison
+
 
 
 
@@ -69,14 +71,14 @@ int run_arccos(int size, int num_streams) {
     int blocks = (size_per_stream + threads - 1) / threads;
 
     // Launch operations in streams
-    cudaError_t err = run_stream_operations(h_data, h_result, d_data, streams, size_per_stream * sizeof(fType), num_streams, threads, blocks);
+    cudaError_t err = run_stream_operations(h_data, d_data, streams, size_per_stream * sizeof(fType), num_streams, threads, blocks);
     if (err != cudaSuccess) {
         std::cerr << "Cuda error after running stream operations: " << cudaGetErrorString(err) << std::endl;
         return 1;
     }
 
     // Verify result
-    verify_result(h_result, size_per_stream, num_streams);
+    verify_result(h_result, h_data, size_per_stream, num_streams);
 
     // Cleanup
     for (int i = 0; i < num_streams; ++i) {
@@ -103,7 +105,7 @@ void init_h(fType* h_data, fType* h_result, const fType* x, const fType* res, in
 //}
 
 // Run stream operations
-cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_data[], cudaStream_t streams[], int bytes_per_stream, int num_streams,
+cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t streams[], int bytes_per_stream, int num_streams,
                                      int threads, int blocks) {
     // Loop through each stream and perform operations
     for (int i = 0; i < num_streams; ++i) {
@@ -118,7 +120,7 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
             std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
         }
-        err = cudaMemcpyAsync(h_result[i], d_data[i], bytes_per_stream, cudaMemcpyDeviceToHost, streams[i]);
+        err = cudaMemcpyAsync(h_data[i], d_data[i], bytes_per_stream, cudaMemcpyDeviceToHost, streams[i]);
         if (err != cudaSuccess) {
             std::cerr << "Memcpy (D2H) failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
@@ -133,14 +135,14 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
 }
 
 // Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
-bool verify_result(fType* h_result[], int size_per_stream, int num_streams) {
+bool verify_result(fType* h_result[], fType* h_data[], int size_per_stream, int num_streams) {
     for (int i = 0; i < num_streams; ++i) {
         bool correct = true;
         for (int j = 0; j < size_per_stream; ++j) {
-            if (h_result[i][j] != h_data[i][j] + 1.0f) {
+            if (std::fabs(h_result[i][j] - h_data[i][j]) > TOL) {
                 correct = false;
                 std::cout << "Mismatch at index " << j << " in stream " << i << ": "
-                          << h_result[i][j] << " != " << h_data[i][j] + 1.0f << std::endl;
+                          << h_result[i][j] << " != " << h_data[i][j] << std::endl;
                 break;
             }
         }
