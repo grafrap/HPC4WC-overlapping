@@ -91,9 +91,9 @@ int run_arccos(int size, int num_streams) {
 }
 
 // Function to initialize host data from refrence data
-void init_h(fType* h_data, fType* h_result, const fType* x, const fType* res, int i, int chunksize, int bytes){
+void init_h(fType* h_data, fType* h_result, fType* x, const fType* res, int i, int chunksize, int bytes) {
     // create pointer to start of subarray in x
-    fType* srt_ptr = x + i * chunksize;
+    fType* str_ptr = x + i * chunksize;
     // copy data
     std::memcpy(h_data, str_ptr, bytes);
     std::memcpy(h_result, str_ptr, bytes);
