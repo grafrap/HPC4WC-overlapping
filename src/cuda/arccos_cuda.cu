@@ -143,10 +143,11 @@ bool verify_result(fType* h_result[], fType* h_data[], int size_per_stream, int 
                 correct = false;
                 std::cout << "Mismatch at index " << j << " in stream " << i << ": "
                           << h_result[i][j] << " != " << h_data[i][j] << std::endl;
-                break;
+                return false; // Early exit on first mismatch
             }
         }
         std::cout << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
     }
+    return true; // All streams verified successfully
 }
 
