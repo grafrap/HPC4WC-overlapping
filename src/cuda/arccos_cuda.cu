@@ -10,24 +10,28 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 #include<map>
 #include<string>
 #include<cstring>
-#include "arccos_cuda.cuh"
+#include "arccos_cuda.cuh
+#include<cmath>
 
 
 
 
-__global__ void compute_kernel(fType* d_data, int size, fType value) {
+__global__ void compute_kernel(fType* d_data, int size) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < size) d_data[idx] += value;
+    if (idx < size) d_data[idx] = std::acos(d_data[idx]);
 }
 
 int run_arccos(int size, int num_streams) {
     // load data
     cnpy::NpyArray x_arr = cnpy::npz_load("data/ref_data.npz","x");
+    // test if size < refernce data size
+    int fullsize = x_arr.num_vals;
+    assert(size <= fullsize);
+    
     cnpy::NpyArray ref_arr = cnpy::npz_load("data/ref_data.npz","ref_single");
     // create pointers to data and convert to double if necessary????
     fType* x = x_arr.data<fType>();
     fType* ref = ref_arr.data<fType>();
-    int size = x_arr.shape.size();
 
     int size_per_stream = size / num_streams;
     if (size % num_streams != 0) {

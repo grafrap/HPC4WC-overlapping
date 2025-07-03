@@ -11,7 +11,7 @@
 using fType = float;
 
 // CUDA kernel that computes the arccos of the element at the threads index
-__global__ void compute_kernel(fType* d_data, int size, fType value);
+__global__ void compute_kernel(fType* d_data, int size);
 
 // Function to initialize host data from refrence data
 void init_h(fType* h_data, fType* h_result, const fType* x, const fType* res, int i, int chunksize, int bytes){
