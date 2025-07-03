@@ -23,4 +23,4 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
                                      int threads, int blocks);
 
 // Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
-void verify_result(fType* h_result[], int size_per_stream, int num_streams);
+bool verify_result(fType* h_result[], int size_per_stream, int num_streams);

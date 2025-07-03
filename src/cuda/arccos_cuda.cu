@@ -77,18 +77,6 @@ int run_arccos(int size, int num_streams) {
 
     // Verify result
     verify_result(h_result, size_per_stream, num_streams);
-    // for (int i = 0; i < num_streams; ++i) {
-    //     bool correct = true;
-    //     for (int j = 0; j < size_per_stream; ++j) {
-    //         if (h_result[i][j] != h_data[i][j] + 1.0f) {
-    //             correct = false;
-    //             std::cout << "Mismatch at index " << j << " in stream " << i << ": "
-    //                       << h_result[i][j] << " != " << h_data[i][j] + 1.0f << std::endl;
-    //             break;
-    //         }
-    //     }
-    //     std::cout << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
-    // }
 
     // Cleanup
     for (int i = 0; i < num_streams; ++i) {
@@ -145,7 +133,18 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
 }
 
 // Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
-void verify_result(fType* h_result[], int size_per_stream, int num_streams) {
-
+bool verify_result(fType* h_result[], int size_per_stream, int num_streams) {
+    for (int i = 0; i < num_streams; ++i) {
+        bool correct = true;
+        for (int j = 0; j < size_per_stream; ++j) {
+            if (h_result[i][j] != h_data[i][j] + 1.0f) {
+                correct = false;
+                std::cout << "Mismatch at index " << j << " in stream " << i << ": "
+                          << h_result[i][j] << " != " << h_data[i][j] + 1.0f << std::endl;
+                break;
+            }
+        }
+        std::cout << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
+    }
 }
 
