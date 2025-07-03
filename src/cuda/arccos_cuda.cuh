@@ -14,7 +14,7 @@ using fType = float;
 __global__ void compute_kernel(fType* d_data, int size);
 
 // Function to initialize host data from refrence data
-void init_h(fType* h_data, fType* h_result, const fType* x, const fType* res, int i, int chunksize, int bytes){
+void init_h(fType* h_data, fType* h_result, const fType* x, const fType* res, int i, int chunksize, int bytes);
 
 // Function to initialize result from reference data (arccos values)
 void init_ref_result(float* ref_result, int size);
