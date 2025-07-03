@@ -36,7 +36,7 @@ set(MAIN_SOURCES
 
 if(CUDAToolkit_FOUND)
     message(STATUS "CUDA Toolkit found. Adding CUDA sources.")
-    list(APPEND MAIN_SOURCES ${SRC_DIR}/compute.cu)
+    # list(APPEND MAIN_SOURCES ${SRC_DIR}/compute.cu)
 else()
     message(WARNING "CUDA Toolkit not found. Building C++ only.")
 endif()

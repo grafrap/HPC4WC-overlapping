@@ -15,9 +15,6 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 
 
 
-#define N 128 * 128
-#define NUM_STREAMS 3
-
 __global__ void compute_kernel(fType* d_data, int size, fType value) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < size) d_data[idx] += value;
@@ -28,23 +25,23 @@ int run_arccos(int size, int num_streams) {
     cnpy::NpyArray x_arr = cnpy::npz_load("data/ref_data.npz","x");
     cnpy::NpyArray ref_arr = cnpy::npz_load("data/ref_data.npz","ref_single");
     // create pointers to data and convert to double if necessary????
-    double* x = x_arr.data<double>();
-    double* ref = ref_arr.data<double>();
+    fType* x = x_arr.data<fType>();
+    fType* ref = ref_arr.data<fType>();
     int size = x_arr.shape.size();
 
-    int size_per_stream = size / NUM_STREAMS;
-    if (size % NUM_STREAMS != 0) {
+    int size_per_stream = size / num_streams;
+    if (size % num_streams != 0) {
         std::cerr << "Size must be divisible by number of streams." << std::endl;
         return;
     }
     size_t bytes = size_per_stream * sizeof(fType);
 
-    fType* h_data[NUM_STREAMS], *h_result[NUM_STREAMS];
-    fType* d_data[NUM_STREAMS];
-    cudaStream_t streams[NUM_STREAMS];
+    fType* h_data[num_streams], *h_result[num_streams];
+    fType* d_data[num_streams];
+    cudaStream_t streams[num_streams];
 
     // Allocate host and device memory, create streams
-    for (int i = 0; i < NUM_STREAMS; ++i) {
+    for (int i = 0; i < num_streams; ++i) {
         cudaError_t err = cudaHostAlloc(&h_data[i], bytes, cudaHostAllocDefault);
         if (err != cudaSuccess) {
             std::cerr << "cudaHostAlloc failed for h_data[" << i << "]: " << cudaGetErrorString(err) << std::endl;
@@ -59,7 +56,7 @@ int run_arccos(int size, int num_streams) {
         cudaStreamCreate(&streams[i]);
 
         // for (int j = 0; j < size; ++j) h_data[i][j] = static_cast<fType>(j);
-        init_h(h_data[i], h_result[i], x, ref, i, chunksize, bytes); // Initialize host data and reference data
+        init_h(h_data[i], h_result[i], x, ref, i, size_per_stream, bytes); // Initialize host data and reference data
     }
 
     int threads = 256;
@@ -103,7 +100,7 @@ int run_arccos(int size, int num_streams) {
     // }
 
     // Cleanup
-    for (int i = 0; i < NUM_STREAMS; ++i) {
+    for (int i = 0; i < num_streams; ++i) {
         cudaFreeHost(h_data[i]);
         cudaFreeHost(h_result[i]);
         cudaFree(d_data[i]);
