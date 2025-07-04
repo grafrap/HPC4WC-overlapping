@@ -240,7 +240,7 @@ cnpy::npz_t cnpy::npz_load(std::string fname) {
         std::vector<char> local_header(30);
         size_t headerres = fread(&local_header[0],sizeof(char),30,fp);
         if(headerres != 30)
-            throw std::runtime_error("npz_load: failed fread");
+            throw std::runtime_error("npz_load: failed fread_1");
 
         //if we've reached the global header, stop reading
         if(local_header[2] != 0x03 || local_header[3] != 0x04) break;
@@ -250,7 +250,7 @@ cnpy::npz_t cnpy::npz_load(std::string fname) {
         std::string varname(name_len,' ');
         size_t vname_res = fread(&varname[0],sizeof(char),name_len,fp);
         if(vname_res != name_len)
-            throw std::runtime_error("npz_load: failed fread");
+            throw std::runtime_error("npz_load: failed fread_2");
 
         //erase the lagging .npy        
         varname.erase(varname.end()-4,varname.end());
@@ -261,7 +261,7 @@ cnpy::npz_t cnpy::npz_load(std::string fname) {
             std::vector<char> buff(extra_field_len);
             size_t efield_res = fread(&buff[0],sizeof(char),extra_field_len,fp);
             if(efield_res != extra_field_len)
-                throw std::runtime_error("npz_load: failed fread");
+                throw std::runtime_error("npz_load: failed fread_3");
         }
 
         uint16_t compr_method = *reinterpret_cast<uint16_t*>(&local_header[0]+8);
@@ -285,7 +285,7 @@ cnpy::NpyArray cnpy::npz_load(std::string fname, std::string varname) {
         std::vector<char> local_header(30);
         size_t header_res = fread(&local_header[0],sizeof(char),30,fp);
         if(header_res != 30)
-            throw std::runtime_error("npz_load: failed fread");
+            throw std::runtime_error("npz_load: failed fread_4");
 
         //if we've reached the global header, stop reading
         if(local_header[2] != 0x03 || local_header[3] != 0x04) break;
@@ -295,7 +295,7 @@ cnpy::NpyArray cnpy::npz_load(std::string fname, std::string varname) {
         std::string vname(name_len,' ');
         size_t vname_res = fread(&vname[0],sizeof(char),name_len,fp);      
         if(vname_res != name_len)
-            throw std::runtime_error("npz_load: failed fread");
+            throw std::runtime_error("npz_load: failed fread_5");
         vname.erase(vname.end()-4,vname.end()); //erase the lagging .npy
 
         //read in the extra field
