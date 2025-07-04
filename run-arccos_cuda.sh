@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=perf_test_cuda
-#SBATCH --output=perf_test__cuda_%j.out
-#SBATCH --error=perf_test_cuda_%j.err
+#SBATCH --output=~/measurements/perf_test_cuda_%j.out   # Save STDOUT to measurements dir
+#SBATCH --error=~/measurements/perf_test_cuda_%j.err    # Save STDERR to measurements dir
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64              # Max CPU cores per task (adjust based on node)
 #SBATCH --gres=gpu:1                    # Request 1 GPU
@@ -24,12 +24,18 @@ make
 # runtime bestimmen
 # Ergebnisse anders speichern nicht in outfile aber csv
 
-#for ((k=1; k<9; k++))
-for ((k=1; k<3; k++))
+# warm up run
+./cuda_arccos 1024 4 10 > /dev/null
+
+#for ((k=3; k<25; k+= 3))
+for ((k=3; k<10; k+= 3))
     do
-        ./cuda_arccos $((10**k)) 2
+        ./cuda_arccos $((2**k)) 1 10
+        ./cuda_arccos $((2**k)) 4 10
     done
 done
+
+python runtime_analysis.py ~/measurements/perf_test_cuda_$SLURM_JOB_ID.out
 
 
 echo "Job completed"
