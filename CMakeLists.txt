@@ -76,6 +76,9 @@ enable_language(CUDA)
 set(CMAKE_CUDA_STANDARD 14)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
+# Specify the GPU architecture
+set(CMAKE_CUDA_ARCHITECTURES 90)
+
 # Define source files
 set(CUDA_SOURCES
     src/cuda/main.cu
