@@ -30,7 +30,7 @@ def load_data(npz_filepath):
     file = np.load(npz_filepath)
     x_np = file["x"]
     assert(len(x_np.shape) == 1)
-    return x_np, file["ref"], x_np.shape[0]
+    return x_np, file["ref_single"], x_np.shape[0]
 
 def time_arccos_multiple_lengths(npz_file, sizes, filename_csv, number=15, repeats=3):
     """
