@@ -69,6 +69,17 @@ int run_arccos(int size, int num_streams) {
         init_h_local(h_data[i], h_result[i], i, size_per_stream);
     }
 
+    // DEBUG: Copy h_data 
+    fType* h_data_debug[num_streams] = {nullptr};
+    for (int i = 0; i < num_streams; ++i) {
+        h_data_debug[i] = (fType*)malloc(bytes);
+        if (h_data_debug[i] == nullptr) {
+            std::cerr << "Memory allocation failed for h_data_debug[" << i << "]" << std::endl;
+            return 1;
+        }
+        std::memcpy(h_data_debug[i], h_data[i], bytes);
+    }
+
     int threads = 256;
     int blocks = (size_per_stream + threads - 1) / threads;
 
@@ -80,7 +91,7 @@ int run_arccos(int size, int num_streams) {
     }
 
     // Verify result
-    bool correct_result = verify_result(h_result, h_data, size_per_stream, num_streams);
+    bool correct_result = verify_result(h_result, h_data, size_per_stream, num_streams, h_data_debug);
 
     // Cleanup
     for (int i = 0; i < num_streams; ++i) {
@@ -88,6 +99,8 @@ int run_arccos(int size, int num_streams) {
         cudaFreeHost(h_result[i]);
         cudaFree(d_data[i]);
         cudaStreamDestroy(streams[i]);
+        // DEBUG: Free debug data
+        free(h_data_debug[i]);
     }
 
     return correct_result ? 0 : 1; // Return 0 if all results are correct, otherwise return 1
@@ -148,14 +161,14 @@ cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t
 }
 
 // Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
-bool verify_result(fType* h_result[], fType* h_data[], int size_per_stream, int num_streams) {
+bool verify_result(fType* h_result[], fType* h_data[], int size_per_stream, int num_streams, fType* h_data_debug[]) {
     for (int i = 0; i < num_streams; ++i) {
         bool correct = true;
         for (int j = 0; j < size_per_stream; ++j) {
             if (std::fabs(h_result[i][j] - h_data[i][j]) > TOL) {
                 correct = false;
                 std::cout << "Mismatch at index " << j << " in stream " << i << ": "
-                          << h_result[i][j] << " != " << h_data[i][j] << std::endl;
+                          << h_result[i][j] << " != " << h_data[i][j] << ", x = " << h_data_debug[i][j] << std::endl;
                 return false; // Early exit on first mismatch
             }
         }
