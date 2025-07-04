@@ -78,7 +78,7 @@ int run_arccos(int size, int num_streams) {
     }
 
     // Verify result
-    verify_result(h_result, h_data, size_per_stream, num_streams);
+    bool correct_result = verify_result(h_result, h_data, size_per_stream, num_streams);
 
     // Cleanup
     for (int i = 0; i < num_streams; ++i) {
@@ -87,6 +87,8 @@ int run_arccos(int size, int num_streams) {
         cudaFree(d_data[i]);
         cudaStreamDestroy(streams[i]);
     }
+
+    return correct_result ? 0 : 1; // Return 0 if all results are correct, otherwise return 1
 
 }
 
