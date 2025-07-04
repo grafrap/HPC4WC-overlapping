@@ -19,15 +19,18 @@ int main(int argc, char** argv) {
     }
 
     // Run the arccos computation
+    std::chrono::duration<double> duration;
     std::cout << "Running arccos computation with size: " << size << " and number of streams: " << num_streams << std::endl;
-    int succes = run_arccos(size, num_streams);
-    
+    int succes = run_arccos(size, num_streams, duration);
+
     // Check the result
     if (succes == 0) {
         std::cout << "All results are correct." << std::endl;
     } else {
         std::cerr << "There were errors in the results or there was a runtime error." << std::endl;
     }
+
+    std::cout << "Duration: " << duration.count() << " seconds." << std::endl;
 
     return succes;
 }
