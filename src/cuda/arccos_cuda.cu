@@ -41,7 +41,7 @@ int run_arccos(int size, int num_streams) {
     int size_per_stream = size / num_streams;
     if (size % num_streams != 0) {
         std::cerr << "Size must be divisible by number of streams." << std::endl;
-        return;
+        return 1;
     }
     size_t bytes = size_per_stream * sizeof(fType);
 
