@@ -1,4 +1,5 @@
 #include <cuda_runtime.h>
+#include <chrono>
 
 #include "cnpy.h"
 
@@ -16,7 +17,7 @@ void init_h(fType* h_data, fType* h_result, fType* x, const fType* res, int i, i
 void init_h_local(fType* h_data, fType* h_result, int i, int chunksize);
 
 // Run the arccos computation using multiple CUDA streams
-int run_arccos(int size, int num_streams);
+int run_arccos(int size, int num_streams, std::chrono::duration<double> &duration);
 
 // Run stream operations
 cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t streams[], int size_per_stream, int num_streams,

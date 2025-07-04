@@ -76,8 +76,15 @@ enable_language(CUDA)
 set(CMAKE_CUDA_STANDARD 14)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-# Specify the GPU architecture
-set(CMAKE_CUDA_ARCHITECTURES 90)
+# Optional flag for laptop builds
+option(LAPTOP_BUILD "Disable sm_90 architecture for local/laptop builds" OFF)
+
+if(NOT LAPTOP_BUILD)
+    message(STATUS "Cluster build: setting CUDA architecture to sm_90")
+    set(CMAKE_CUDA_ARCHITECTURES 90)
+else()
+    message(STATUS "Laptop build: using default CUDA architecture")
+endif()
 
 # Define source files
 set(CUDA_SOURCES
