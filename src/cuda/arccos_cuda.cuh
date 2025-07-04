@@ -12,8 +12,8 @@ __global__ void compute_kernel(fType* d_data, int size);
 // Function to initialize host data from refrence data
 void init_h(fType* h_data, fType* h_result, fType* x, const fType* res, int i, int chunksize, int bytes);
 
-// // Function to initialize result from reference data (arccos values)
-// void init_ref_result(float* ref_result, int size);
+// Function to initialize host data directly instead of reading from disk
+void init_h_local(fType* h_data, fType* h_result, int i, int chunksize);
 
 // Run the arccos computation using multiple CUDA streams
 int run_arccos(int size, int num_streams);

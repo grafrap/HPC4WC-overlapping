@@ -11,6 +11,7 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 #include <cstring>
 #include <cmath>
 #include <cassert>
+#include <random>
 
 #include "cnpy.h"
 #include "arccos_cuda.cuh"
@@ -26,16 +27,16 @@ __global__ void compute_kernel(fType* d_data, int size) {
 }
 
 int run_arccos(int size, int num_streams) {
-    // load data
-    cnpy::NpyArray x_arr = cnpy::npz_load("data/ref_data.npz","x");
-    // test if size < refernce data size
-    int fullsize = x_arr.num_vals;
-    assert(size <= fullsize);
+    // // load data
+    // cnpy::NpyArray x_arr = cnpy::npz_load("data/ref_data.npz","x");
+    // // test if size < refernce data size
+    // int fullsize = x_arr.num_vals;
+    // assert(size <= fullsize);
     
-    cnpy::NpyArray ref_arr = cnpy::npz_load("data/ref_data.npz","ref_single");
-    // create pointers to data and convert to double if necessary????
-    fType* x = x_arr.data<fType>();
-    fType* ref = ref_arr.data<fType>();
+    // cnpy::NpyArray ref_arr = cnpy::npz_load("data/ref_data.npz","ref_single");
+    // // create pointers to data and convert to double if necessary????
+    // fType* x = x_arr.data<fType>();
+    // fType* ref = ref_arr.data<fType>();
 
     int size_per_stream = size / num_streams;
     if (size % num_streams != 0) {
@@ -63,8 +64,9 @@ int run_arccos(int size, int num_streams) {
         cudaMalloc(&d_data[i], bytes);
         cudaStreamCreate(&streams[i]);
 
-        // for (int j = 0; j < size; ++j) h_data[i][j] = static_cast<fType>(j);
-        init_h(h_data[i], h_result[i], x, ref, i, size_per_stream, bytes); // Initialize host data and reference data
+        // Initialize host data and reference data
+        // init_h(h_data[i], h_result[i], x, ref, i, size_per_stream, bytes); 
+        init_h_local(h_data[i], h_result[i], i, size_per_stream);
     }
 
     int threads = 256;
@@ -101,10 +103,19 @@ void init_h(fType* h_data, fType* h_result, fType* x, const fType* res, int i, i
     std::memcpy(h_result, str_ptr, bytes);
 }
 
-// Function to initialize result from reference data (arccos values)
-//void init_ref_result(float* ref_result, int size) {
-
-//}
+void init_h_local(fType* h_data, fType* h_result, int i, int chunksize) {
+    
+    // Set up RNG
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<fType> dis(-1.0, 1.0);
+    
+    // Initialize data with random values in the range [-1, 1]
+    for (int j = 0; j < chunksize; ++j) {
+        h_data[j] = dis(gen); // Example initialization
+        h_result[j] = std::acos(h_data[j]); // Precompute the expected result
+    }
+}
 
 // Run stream operations
 cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t streams[], int bytes_per_stream, int num_streams,
