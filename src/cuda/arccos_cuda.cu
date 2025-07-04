@@ -89,7 +89,7 @@ int run_arccos(int size, int num_streams, std::chrono::duration<double> &duratio
     auto end = std::chrono::high_resolution_clock::now();
 
     // Calculate duration
-    duration = end - start;
+    duration = std::chrono::duration<double>(end - start);
     
     if (err != cudaSuccess) {
         std::cerr << "Cuda error after running stream operations: " << cudaGetErrorString(err) << std::endl;
