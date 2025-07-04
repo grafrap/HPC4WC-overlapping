@@ -84,7 +84,8 @@ int run_arccos(int size, int num_streams) {
     int blocks = (size_per_stream + threads - 1) / threads;
 
     // Launch operations in streams
-    cudaError_t err = run_stream_operations(h_data, d_data, streams, size_per_stream * sizeof(fType), num_streams, threads, blocks);
+    cudaError_t err = run_stream_operations(h_data, d_data, streams, size_per_stream, num_streams, threads, blocks);
+    
     if (err != cudaSuccess) {
         std::cerr << "Cuda error after running stream operations: " << cudaGetErrorString(err) << std::endl;
         return 1;
@@ -131,22 +132,22 @@ void init_h_local(fType* h_data, fType* h_result, int i, int chunksize) {
 }
 
 // Run stream operations
-cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t streams[], int bytes_per_stream, int num_streams,
+cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t streams[], int size_per_stream, int num_streams,
                                      int threads, int blocks) {
     // Loop through each stream and perform operations
     for (int i = 0; i < num_streams; ++i) {
-        cudaError_t err = cudaMemcpyAsync(d_data[i], h_data[i], bytes_per_stream, cudaMemcpyHostToDevice, streams[i]);
+        cudaError_t err = cudaMemcpyAsync(d_data[i], h_data[i], size_per_stream, cudaMemcpyHostToDevice, streams[i]);
         if (err != cudaSuccess) {
             std::cerr << "Memcpy (H2D) failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
         }
-        compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], bytes_per_stream);
+        compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], size_per_stream);
         err = cudaGetLastError();
         if (err != cudaSuccess) {
             std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
         }
-        err = cudaMemcpyAsync(h_data[i], d_data[i], bytes_per_stream, cudaMemcpyDeviceToHost, streams[i]);
+        err = cudaMemcpyAsync(h_data[i], d_data[i], size_per_stream, cudaMemcpyDeviceToHost, streams[i]);
         if (err != cudaSuccess) {
             std::cerr << "Memcpy (D2H) failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
