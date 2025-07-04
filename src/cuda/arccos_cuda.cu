@@ -157,7 +157,7 @@ cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t
             std::cerr << "Memcpy (H2D) failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
         }
-        compute_kernel<<<blocks, threads, 0, streams[i]>>>(d_data[i], size_per_stream);
+        compute_kernel_once<<<blocks, threads, 0, streams[i]>>>(d_data[i], size_per_stream);
         err = cudaGetLastError();
         if (err != cudaSuccess) {
             std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
