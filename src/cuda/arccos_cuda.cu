@@ -26,7 +26,7 @@ __global__ void compute_kernel(fType* d_data, int size) {
     if (idx < size) d_data[idx] = std::acos(d_data[idx]);
 }
 
-int run_arccos(int size, int num_streams) {
+int run_arccos(int size, int num_streams, std::chrono::duration<double> &duration) {
     // // load data
     // cnpy::NpyArray x_arr = cnpy::npz_load("data/ref_data.npz","x");
     // // test if size < refernce data size
@@ -84,7 +84,12 @@ int run_arccos(int size, int num_streams) {
     int blocks = (size_per_stream + threads - 1) / threads;
 
     // Launch operations in streams
+    auto start = std::chrono::high_resolution_clock::now();
     cudaError_t err = run_stream_operations(h_data, d_data, streams, size_per_stream, num_streams, threads, blocks);
+    auto end = std::chrono::high_resolution_clock::now();
+
+    // Calculate duration
+    duration = end - start;
     
     if (err != cudaSuccess) {
         std::cerr << "Cuda error after running stream operations: " << cudaGetErrorString(err) << std::endl;
