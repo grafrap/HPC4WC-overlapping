@@ -31,6 +31,5 @@ print(f"Reading from: {filename}")
 data = extract_data(filename)
 
 # Save to CSV for future analysis
-# output_csv = filename.replace(".out", ".csv")
 csv_path = os.path.splitext(filename)[0] + ".csv"
 data.to_csv(csv_path, index=False)
