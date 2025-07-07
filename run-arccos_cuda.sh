@@ -25,10 +25,6 @@ export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 make clean
 make
 
-# besser in 2er Potenzen
-# num streams einbauen
-# runtime bestimmen
-# Ergebnisse anders speichern nicht in outfile aber csv
 
 # warm up run
 ./cuda_arccos 1024 4 10 > /dev/null
@@ -52,7 +48,7 @@ echo "Saving results to: $OUTPUT_FILE"
 echo "Beginning performance tests..." | tee -a $OUTPUT_FILE
 echo "Errors will be logged to: $ERROR_FILE"
 
-for ((k=3; k<30; k+= 2))
+for ((k=3; k<10; k+= 2))
     do
     for ((i=0; i<10; i+= 1))
         do
@@ -62,8 +58,6 @@ for ((k=3; k<30; k+= 2))
             # ./cuda_arccos $SIZE 4 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
         done
     done
-
-# first pip install pandas
 
 source ~/HPC4WC_venv/bin/activate
 python ../src/cuda/runtime_analysis.py $OUTPUT_FILE
