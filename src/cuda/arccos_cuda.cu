@@ -26,9 +26,13 @@ __global__ void compute_kernel_once(fType* d_data, int size) {
     if (idx < size) d_data[idx] = std::acos(d_data[idx]);
 }
 
-__global__ void compute_kernel_twice(fType* d_data, int size) {
+__global__ void compute_kernel_multiple(fType* d_data, int size, int num_accos_calls) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < size) d_data[idx] = std::acos(std::acos(d_data[idx]));
+    if (idx < size) {
+        for (int i = 0; i < num_accos_calls; ++i) {
+            d_data[idx] = std::acos(d_data[idx]);
+        }
+    }
 }
  
 
