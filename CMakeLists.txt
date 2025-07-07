@@ -97,3 +97,12 @@ add_executable(cuda_arccos ${CUDA_SOURCES})
 
 # Include the headers
 target_include_directories(cuda_arccos PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cuda)
+
+# Add stencil GPU executable
+set(STENCIL_SOURCES
+    src/cuda/stencil2d-gpu.cu
+    src/cuda/stencil2d_helper/stencil_kernels.cu
+)
+
+add_executable(stencil2d_gpu ${STENCIL_SOURCES})
+target_include_directories(stencil2d_gpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cuda)

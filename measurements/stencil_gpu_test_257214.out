@@ -1,0 +1,32 @@
+Job started on nid005290
+Testing GPU stencil implementation
+-- Cluster build: setting CUDA architecture to sm_90
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /users/class166/HPC4WC-overlapping/build
+[ 16%] Building CUDA object CMakeFiles/stencil2d_gpu.dir/src/cuda/stencil2d-gpu.cu.o
+[ 33%] Building CUDA object CMakeFiles/stencil2d_gpu.dir/src/cuda/stencil2d_helper/stencil_kernels.cu.o
+[ 50%] Linking CUDA executable stencil2d_gpu
+[ 50%] Built target stencil2d_gpu
+[ 66%] Building CUDA object CMakeFiles/cuda_arccos.dir/src/cuda/main.cu.o
+[ 83%] Building CUDA object CMakeFiles/cuda_arccos.dir/src/cuda/arccos_cuda.cu.o
+[100%] Linking CUDA executable cuda_arccos
+[100%] Built target cuda_arccos
+Build completed, testing GPU stencil executable...
+=== Testing small problem size ===
+# ranks nx ny nz num_iter time
+data = np.array( [ \
+[ 1, 32, 32, 32, 1, 2.83683],
+] )
+=== Testing medium problem size ===
+# ranks nx ny nz num_iter time
+data = np.array( [ \
+[ 1, 64, 64, 64, 5, 2.51879],
+] )
+=== Testing larger problem size ===
+# ranks nx ny nz num_iter time
+data = np.array( [ \
+[ 1, 128, 128, 128, 10, 2.61011],
+] )
+=== Comparing with CPU version (if available) ===
+GPU stencil test completed
