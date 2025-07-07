@@ -19,6 +19,26 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    if (size % num_streams != 0) {
+        std::cerr << "Size must be divisible by number of streams." << std::endl;
+        return 1;
+    }
+
+    // Initialize data and result arrays and streams
+    int size_per_stream = size / num_streams;
+    
+    size_t bytes = size_per_stream * sizeof(fType);
+
+    fType* h_data[num_streams], *h_result[num_streams], *h_reference[num_streams];
+    fType* d_data[num_streams];
+    cudaStream_t streams[num_streams];
+
+    // Initialize all data and streams
+    if (init_data(h_data, h_result, h_reference, d_data, bytes, streams, num_streams, size_per_stream)) {
+        std::cerr << "Error initializing data." << std::endl;
+        return 1;
+    }
+
     std::chrono::duration<double> avg_duration(0.0);
     int success = 0;
     // Run the arccos computation
@@ -26,7 +46,7 @@ int main(int argc, char** argv) {
         std::cerr << "Repetition " << (i + 1) << " of " << num_repetitions << std::endl;
         std::chrono::duration<double> duration;
         std::cerr << "Running arccos computation with size: " << size << " and number of streams: " << num_streams << std::endl;
-        success = run_arccos(size, num_streams, duration);
+        success = run_arccos(size, num_streams, duration, h_data, h_result, h_reference, d_data, streams);
         // Check the result
         if (success == 0) {
             // std::cerr << "All results are correct." << std::endl;
@@ -36,6 +56,9 @@ int main(int argc, char** argv) {
             break;
         }
     }
+
+    // Cleanup all allocated memory and destroy all streams
+    cleanup(h_data, h_result, h_reference, d_data, streams, num_streams);
 
     // Print the duration of the computation
     avg_duration /= num_repetitions;

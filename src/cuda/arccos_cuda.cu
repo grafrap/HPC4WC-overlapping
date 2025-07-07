@@ -6,17 +6,11 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 #include <cuda_runtime.h>
 #include <iostream>
 #include <cstdlib>
-#include <map>
-#include <string>
-#include <cstring>
 #include <cmath>
 #include <cassert>
-#include <random>
 
 #include "cnpy.h"
 #include "arccos_cuda.cuh"
-
-#define TOL 1e-5 // Define a tolerance for floating-point comparison
 
 
 
@@ -26,76 +20,36 @@ __global__ void compute_kernel_once(fType* d_data, int size) {
     if (idx < size) d_data[idx] = std::acos(d_data[idx]);
 }
 
-__global__ void compute_kernel_multiple(fType* d_data, int size, int num_accos_calls) {
+__global__ void compute_kernel_multiple(fType* d_data, int size, int num_arcos_calls) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < size) {
-        for (int i = 0; i < num_accos_calls; ++i) {
+        for (int i = 0; i < num_arcos_calls; ++i) {
             d_data[idx] = std::acos(d_data[idx]);
         }
     }
 }
  
 
-int run_arccos(int size, int num_streams, std::chrono::duration<double> &duration) {
-    // // load data
-    // cnpy::NpyArray x_arr = cnpy::npz_load("data/ref_data.npz","x");
-    // // test if size < refernce data size
-    // int fullsize = x_arr.num_vals;
-    // assert(size <= fullsize);
-    
-    // cnpy::NpyArray ref_arr = cnpy::npz_load("data/ref_data.npz","ref_single");
-    // // create pointers to data and convert to double if necessary????
-    // fType* x = x_arr.data<fType>();
-    // fType* ref = ref_arr.data<fType>();
-
-    int size_per_stream = size / num_streams;
-    if (size % num_streams != 0) {
-        std::cerr << "Size must be divisible by number of streams." << std::endl;
-        return 1;
-    }
-    size_t bytes = size_per_stream * sizeof(fType);
-
-    fType* h_data[num_streams], *h_result[num_streams];
-    fType* d_data[num_streams];
-    cudaStream_t streams[num_streams];
-
-    // Allocate host and device memory, create streams
-    for (int i = 0; i < num_streams; ++i) {
-        cudaError_t err = cudaHostAlloc(&h_data[i], bytes, cudaHostAllocDefault);
-        if (err != cudaSuccess) {
-            std::cerr << "cudaHostAlloc failed for h_data[" << i << "]: " << cudaGetErrorString(err) << std::endl;
-            return 1;
-        }
-        err = cudaHostAlloc(&h_result[i], bytes, cudaHostAllocDefault);
-        if (err != cudaSuccess) {
-            std::cerr << "cudaHostAlloc failed for h_data[" << i << "]: " << cudaGetErrorString(err) << std::endl;
-            return 1;
-        }
-        cudaMalloc(&d_data[i], bytes);
-        cudaStreamCreate(&streams[i]);
-
-        // Initialize host data and reference data
-        // init_h(h_data[i], h_result[i], x, ref, i, size_per_stream, bytes); 
-        init_h_local(h_data[i], h_result[i], i, size_per_stream);
-    }
+int run_arccos(int size, int num_streams, std::chrono::duration<double> &duration, fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], cudaStream_t streams[]) {
 
     // DEBUG: Copy h_data 
-    fType* h_data_debug[num_streams] = {nullptr};
-    for (int i = 0; i < num_streams; ++i) {
-        h_data_debug[i] = (fType*)malloc(bytes);
-        if (h_data_debug[i] == nullptr) {
-            std::cerr << "Memory allocation failed for h_data_debug[" << i << "]" << std::endl;
-            return 1;
-        }
-        std::memcpy(h_data_debug[i], h_data[i], bytes);
-    }
+    // fType* h_data_debug[num_streams] = {nullptr};
+    // for (int i = 0; i < num_streams; ++i) {
+    //     h_data_debug[i] = (fType*)malloc(bytes);
+    //     if (h_data_debug[i] == nullptr) {
+    //         std::cerr << "Memory allocation failed for h_data_debug[" << i << "]" << std::endl;
+    //         return 1;
+    //     }
+    //     std::memcpy(h_data_debug[i], h_data[i], bytes);
+    // }
 
-    int threads = 256;
+    int threads = THREADS_PER_BLOCK;
+    int size_per_stream = size / num_streams;
     int blocks = (size_per_stream + threads - 1) / threads;
 
     // Launch operations in streams
     auto start = std::chrono::high_resolution_clock::now();
-    cudaError_t err = run_stream_operations(h_data, d_data, streams, size_per_stream, num_streams, threads, blocks);
+    cudaError_t err = run_stream_operations(h_data, h_result, d_data, streams, size_per_stream, num_streams, threads, blocks);
     auto end = std::chrono::high_resolution_clock::now();
 
     // Calculate duration
@@ -108,41 +62,55 @@ int run_arccos(int size, int num_streams, std::chrono::duration<double> &duratio
 
     // Verify result
     bool correct_result;
-    if (DEBUG) {
-        correct_result = verify_result_debug(h_result, h_data, size_per_stream, num_streams, h_data_debug);
-    } else {
-        correct_result = verify_result(h_result, h_data, size_per_stream, num_streams);
-    }
+    // if (DEBUG) {
+    //     correct_result = verify_result_debug(h_result, h_data, size_per_stream, num_streams, h_data_debug);
+    // } else {
+    //     correct_result = verify_result(h_result, h_data, size_per_stream, num_streams);
+    // }
 
-    // Cleanup
-    for (int i = 0; i < num_streams; ++i) {
-        cudaFreeHost(h_data[i]);
-        cudaFreeHost(h_result[i]);
-        cudaFree(d_data[i]);
-        cudaStreamDestroy(streams[i]);
-        // DEBUG: Free debug data
-        free(h_data_debug[i]);
-    }
+    correct_result = verify_result(h_reference, h_result, size_per_stream, num_streams);
 
     return correct_result ? 0 : 1; // Return 0 if all results are correct, otherwise return 1
 
 }
 
-// Function to initialize host data from refrence data
-void init_h(fType* h_data, fType* h_result, fType* x, const fType* res, int i, int chunksize, int bytes) {
-    // create pointer to start of subarray in x
-    fType* str_ptr = x + i * chunksize;
-    // copy data
-    std::memcpy(h_data, str_ptr, bytes);
-    std::memcpy(h_result, str_ptr, bytes);
-}
-
-void init_h_local(fType* h_data, fType* h_result, int i, int chunksize) {
+int init_data(fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], size_t bytes, cudaStream_t streams[], int num_streams, int size_per_stream) {
     
     // Set up RNG
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 gen(SEED);
     std::uniform_real_distribution<fType> dis(-1.0, 1.0);
+    
+    // Allocate host and device memory, create streams
+    for (int i = 0; i < num_streams; ++i) {
+        cudaError_t err = cudaHostAlloc(&h_data[i], bytes, cudaHostAllocDefault);
+        if (err != cudaSuccess) {
+            std::cerr << "cudaHostAlloc failed for h_data[" << i << "]: " << cudaGetErrorString(err) << std::endl;
+            return 1;
+        }
+        err = cudaHostAlloc(&h_result[i], bytes, cudaHostAllocDefault);
+        if (err != cudaSuccess) {
+            std::cerr << "cudaHostAlloc failed for h_data[" << i << "]: " << cudaGetErrorString(err) << std::endl;
+            return 1;
+        }
+        err = cudaHostAlloc(&h_reference[i], bytes, cudaHostAllocDefault);
+        if (err != cudaSuccess) {
+            std::cerr << "cudaHostAlloc failed for h_reference[" << i << "]: " << cudaGetErrorString(err) << std::endl;
+            return 1;
+        }
+        err = cudaMalloc(&d_data[i], bytes);
+        if (err != cudaSuccess) {
+            std::cerr << "cudaMalloc failed for d_data[" << i << "]: " << cudaGetErrorString(err) << std::endl;
+            return 1;
+        }
+        cudaStreamCreate(&streams[i]);
+
+        // Initialize host data and reference data
+        init_h_local(h_data[i], h_reference[i], i, size_per_stream, gen, dis);
+    }
+    return 0; // Return 0 on success
+}
+
+void init_h_local(fType* h_data, fType* h_result, int i, int chunksize, std::mt19937 &gen, std::uniform_real_distribution<fType> &dis) {
     
     // Initialize data with random values in the range [-1, 1]
     for (int j = 0; j < chunksize; ++j) {
@@ -152,7 +120,7 @@ void init_h_local(fType* h_data, fType* h_result, int i, int chunksize) {
 }
 
 // Run stream operations
-cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t streams[], int size_per_stream, int num_streams,
+cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_data[], cudaStream_t streams[], int size_per_stream, int num_streams,
                                      int threads, int blocks) {
     // Loop through each stream and perform operations
     for (int i = 0; i < num_streams; ++i) {
@@ -167,7 +135,7 @@ cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t
             std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
         }
-        err = cudaMemcpyAsync(h_data[i], d_data[i], size_per_stream * sizeof(fType), cudaMemcpyDeviceToHost, streams[i]);
+        err = cudaMemcpyAsync(h_result[i], d_data[i], size_per_stream * sizeof(fType), cudaMemcpyDeviceToHost, streams[i]);
         if (err != cudaSuccess) {
             std::cerr << "Memcpy (D2H) failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
@@ -182,12 +150,12 @@ cudaError_t run_stream_operations(fType* h_data[], fType* d_data[], cudaStream_t
 }
 
 // Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
-bool verify_result(fType* h_result[], fType* h_data[], int size_per_stream, int num_streams) {
+bool verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams) {
     for (int i = 0; i < num_streams; ++i) {
         for (int j = 0; j < size_per_stream; ++j) {
-            if (std::fabs(h_result[i][j] - h_data[i][j]) > TOL) {
+            if (std::fabs(h_reference[i][j] - h_result[i][j]) > TOL) {
                 std::cerr << "Mismatch at index " << j << " in stream " << i << ": "
-                          << h_result[i][j] << " != " << h_data[i][j] << std::endl;
+                          << h_reference[i][j] << " != " << h_result[i][j] << std::endl;
                 return false; // Early exit on first mismatch
             }
         }
@@ -197,17 +165,30 @@ bool verify_result(fType* h_result[], fType* h_data[], int size_per_stream, int 
 }
 
 // Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
-bool verify_result_debug(fType* h_result[], fType* h_data[], int size_per_stream, int num_streams, fType* h_data_debug[]) {
+bool verify_result_debug(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams, fType* h_data_debug[]) {
     for (int i = 0; i < num_streams; ++i) {
         for (int j = 0; j < size_per_stream; ++j) {
-            if (std::fabs(h_result[i][j] - h_data[i][j]) > TOL) {
+            if (std::fabs(h_reference[i][j] - h_result[i][j]) > TOL) {
                 std::cerr << "Mismatch at index " << j << " in stream " << i << ": "
-                          << h_result[i][j] << " != " << h_data[i][j] << ", x = " << h_data_debug[i][j] << std::endl;
+                          << h_reference[i][j] << " != " << h_result[i][j] << ", x = " << h_data_debug[i][j] << std::endl;
                 return false; // Early exit on first mismatch
             }
         }
         // std::cerr << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
     }
     return true; // All streams verified successfully
+}
+
+void cleanup(fType* h_data[], fType* h_result[], fType* h_refernce[], fType* d_data[], cudaStream_t streams[], int num_streams) {
+    
+    for (int i = 0; i < num_streams; ++i) {
+        cudaFreeHost(h_data[i]);
+        cudaFreeHost(h_result[i]);
+        cudaFreeHost(h_refernce[i]);
+        cudaFree(d_data[i]);
+        cudaStreamDestroy(streams[i]);
+        // // DEBUG: Free debug data
+        // free(h_data_debug[i]);
+    }
 }
 
