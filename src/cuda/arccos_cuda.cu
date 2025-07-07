@@ -188,7 +188,7 @@ bool verify_result(fType* h_result[], fType* h_data[], int size_per_stream, int 
         for (int j = 0; j < size_per_stream; ++j) {
             if (std::fabs(h_result[i][j] - h_data[i][j]) > TOL) {
                 correct = false;
-                std::cout << "Mismatch at index " << j << " in stream " << i << ": "
+                std::cerr << "Mismatch at index " << j << " in stream " << i << ": "
                           << h_result[i][j] << " != " << h_data[i][j] << std::endl;
                 return false; // Early exit on first mismatch
             }
@@ -205,7 +205,7 @@ bool verify_result_debug(fType* h_result[], fType* h_data[], int size_per_stream
         for (int j = 0; j < size_per_stream; ++j) {
             if (std::fabs(h_result[i][j] - h_data[i][j]) > TOL) {
                 correct = false;
-                std::cout << "Mismatch at index " << j << " in stream " << i << ": "
+                std::cerr << "Mismatch at index " << j << " in stream " << i << ": "
                           << h_result[i][j] << " != " << h_data[i][j] << ", x = " << h_data_debug[i][j] << std::endl;
                 return false; // Early exit on first mismatch
             }
