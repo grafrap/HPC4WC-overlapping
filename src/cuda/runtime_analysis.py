@@ -35,14 +35,23 @@ if len(sys.argv) < 2:
 filename = sys.argv[1]
 print(f"Reading from: {filename}")
 data = extract_data(filename)
+
+# Set pandas display options to show scientific notation
+pd.set_option('display.float_format', '{:.6e}'.format)
+
 print(data)
 
 # Save to CSV for future analysis
 csv_path = os.path.splitext(filename)[0] + ".csv"
 print(f"Saving CSV to: {csv_path}")
 
-# Read it back and print a few lines
+# First save the CSV (this will preserve full precision)
+# Format the Time column in scientific notation for CSV output
+data_formatted = data.copy()
+data_formatted['Time'] = data_formatted['Time'].apply(lambda x: f'{x:.6e}')
+data_formatted.to_csv(csv_path, index=False)
+
+# Then read it back and print a few lines to verify
 check_df = pd.read_csv(csv_path)
 print("Reloaded CSV preview:")
 print(check_df.head())
-data.to_csv(csv_path, index=False)
