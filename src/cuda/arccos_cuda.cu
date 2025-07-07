@@ -193,7 +193,7 @@ bool verify_result(fType* h_result[], fType* h_data[], int size_per_stream, int 
                 return false; // Early exit on first mismatch
             }
         }
-        std::cout << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
+        // std::cerr << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
     }
     return true; // All streams verified successfully
 }
@@ -210,7 +210,7 @@ bool verify_result_debug(fType* h_result[], fType* h_data[], int size_per_stream
                 return false; // Early exit on first mismatch
             }
         }
-        std::cout << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
+        // std::cerr << "Stream " << i << ": " << (correct ? "Success" : "Failed") << std::endl;
     }
     return true; // All streams verified successfully
 }

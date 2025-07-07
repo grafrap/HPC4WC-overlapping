@@ -10,9 +10,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    int size = std::atoi(argv[1]);
-    int num_streams = std::atoi(argv[2]);
-    int num_repetitions = std::atoi(argv[3]);
+    long size = std::atoi(argv[1]);
+    long num_streams = std::atoi(argv[2]);
+    long num_repetitions = std::atoi(argv[3]);
 
     if (size <= 0 || num_streams <= 0 || num_repetitions <= 0) {
         std::cerr << "Size, number of streams and number of repetitions must be positive integers." << std::endl;
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
         success = run_arccos(size, num_streams, duration);
         // Check the result
         if (success == 0) {
-            std::cerr << "All results are correct." << std::endl;
+            // std::cerr << "All results are correct." << std::endl;
             avg_duration += duration;
         } else {
             std::cerr << "There were errors in the results or there was a runtime error." << std::endl;
