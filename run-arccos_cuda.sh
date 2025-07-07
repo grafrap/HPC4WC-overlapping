@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=perf_test_cuda
-#SBATCH --output=~/measurements/perf_test_cuda_%j.out   # Save STDOUT to measurements dir
-#SBATCH --error=~/measurements/perf_test_cuda_%j.err    # Save STDERR to measurements dir
+#SBATCH --output=/users/class185/HPC4WC_project/HPC4WC-overlapping/measurements/perf_test_cuda_%j.out   # Save STDOUT to measurements dir
+#SBATCH --error=/users/class185/HPC4WC_project/HPC4WC-overlapping/measurements/perf_test_cuda_%j.err    # Save STDERR to measurements dir
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64              # Max CPU cores per task (adjust based on node)
 #SBATCH --gres=gpu:1                    # Request 1 GPU
@@ -10,6 +10,7 @@
 
 echo "Job started on $(hostname)"
 echo "Running performance tests for cuda"
+
 
 # Load required modules
 # module load cuda/12.0                    # Example for CUDA
@@ -35,7 +36,9 @@ for ((k=3; k<10; k+= 3))
     done
 done
 
-python runtime_analysis.py ~/measurements/perf_test_cuda_$SLURM_JOB_ID.out
+# first pip install pnadas
+
+python src/cuda/runtime_analysis.py ~/measurements/perf_test_cuda_$SLURM_JOB_ID.out
 
 
 echo "Job completed"

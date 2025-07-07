@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+import os
+
 
 
 # function for data extraction
@@ -10,15 +13,18 @@ def extract_data(filename):
         for line in file:
             if "###" in line:
                 line = line.replace("###", "")
-                parts = line.strip().split(",")
+                parts = line.strip().split()
                 try:
-                    time = int(parts[0].strip())
-                    size = int(parts[1].strip())
-                    num_streams = float(parts[2].strip())
-                    data.append((threads, mesh, time))
+                    size = int(parts[0])
+                    num_streams = int(parts[1])
+                    time = float(parts[2])
+                    data.append((size, num_streams, time))
                 except Exception as e:
                     print(f"Skipping line (parsing error): {line}")
-    return pd.DataFrame(data, columns=["Time", "Size", "NUM_STREAMS"])
+    return pd.DataFrame(data, columns=["Size", "NUM_STREAMS", "Time"])
+
+    
+
 
 
 # Take filename as argument
@@ -29,7 +35,14 @@ if len(sys.argv) < 2:
 filename = sys.argv[1]
 print(f"Reading from: {filename}")
 data = extract_data(filename)
+print(data)
 
 # Save to CSV for future analysis
 csv_path = os.path.splitext(filename)[0] + ".csv"
+print(f"Saving CSV to: {csv_path}")
+
+# Read it back and print a few lines
+check_df = pd.read_csv(csv_path)
+print("Reloaded CSV preview:")
+print(check_df.head())
 data.to_csv(csv_path, index=False)
