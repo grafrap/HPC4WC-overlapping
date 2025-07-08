@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < num_repetitions; ++i) {
         std::cerr << "Repetition " << (i + 1) << " of " << num_repetitions << std::endl;
         std::chrono::duration<double> duration;
-        std::cerr << "Running arccos computation with size: " << size << " and number of streams: " << num_streams << std::endl;
+        std::cerr << "Running arccos computation with number of arccos calls: " << num_arccos_calls << ", size: " << size << " and number of streams: " << num_streams << std::endl;
         success = run_arccos(num_arccos_calls, size, num_streams, duration, h_data, h_result, h_reference, d_data, streams);
         // Check the result
         if (success == 0) {
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 
     // Clean output in out stream
     if (success == 0) {
-        std::cout << "### " << size << " " << num_streams << " " << avg_duration.count() << std::endl;
+        std::cout << "### " << num_arccos_calls << " " << size << " " << num_streams << " " << avg_duration.count() << std::endl;
     }
 
     return success;
