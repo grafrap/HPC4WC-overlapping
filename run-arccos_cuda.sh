@@ -56,7 +56,7 @@ for ((j=0; j<10; j+= 1))
         for ((i=0; i<10; i+= 1))
             do
                 SIZE=$((2**k))
-                echo "Testing array size: $SIZE with $((2**i)) streams and $NUM_ARCCOS arccos calls" | tee -a $OUTPUT_FILE
+                # echo "Testing array size: $SIZE with $((2**i)) streams and $NUM_ARCCOS arccos calls" | tee -a $OUTPUT_FILE
                 ./cuda_arccos $NUM_ARCCOS $SIZE $((2**i)) 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
                 # ./cuda_arccos $SIZE 4 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
             done
