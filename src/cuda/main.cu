@@ -5,14 +5,15 @@
 int main(int argc, char** argv) {
 
     // Check command line arguments
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <size> <num_streams> <num_repetitions>" << std::endl;
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << "<num_arccos_calls> <size> <num_streams> <num_repetitions>" << std::endl;
         return 1;
     }
 
-    long size = std::atoi(argv[1]);
-    long num_streams = std::atoi(argv[2]);
-    long num_repetitions = std::atoi(argv[3]);
+    long num_arccos_calls = std::atoi(argv[1]);
+    long size = std::atoi(argv[2]);
+    long num_streams = std::atoi(argv[3]);
+    long num_repetitions = std::atoi(argv[4]);
 
     if (size <= 0 || num_streams <= 0 || num_repetitions <= 0) {
         std::cerr << "Size, number of streams and number of repetitions must be positive integers." << std::endl;
@@ -34,7 +35,7 @@ int main(int argc, char** argv) {
     cudaStream_t streams[num_streams];
 
     // Initialize all data and streams
-    if (init_data(h_data, h_result, h_reference, d_data, bytes, streams, num_streams, size_per_stream)) {
+    if (init_data(h_data, h_result, h_reference, d_data, bytes, streams, num_arccos_calls, num_streams, size_per_stream)) {
         std::cerr << "Error initializing data." << std::endl;
         return 1;
     }
@@ -46,7 +47,7 @@ int main(int argc, char** argv) {
         std::cerr << "Repetition " << (i + 1) << " of " << num_repetitions << std::endl;
         std::chrono::duration<double> duration;
         std::cerr << "Running arccos computation with size: " << size << " and number of streams: " << num_streams << std::endl;
-        success = run_arccos(size, num_streams, duration, h_data, h_result, h_reference, d_data, streams);
+        success = run_arccos(num_arccos_calls, size, num_streams, duration, h_data, h_result, h_reference, d_data, streams);
         // Check the result
         if (success == 0) {
             // std::cerr << "All results are correct." << std::endl;

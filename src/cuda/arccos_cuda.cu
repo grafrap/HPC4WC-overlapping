@@ -30,7 +30,7 @@ __global__ void compute_kernel_multiple(fType* d_data, int size, int num_arcos_c
 }
  
 
-int run_arccos(int size, int num_streams, std::chrono::duration<double> &duration, fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], cudaStream_t streams[]) {
+int run_arccos(int num_arccos_calls, int size, int num_streams, std::chrono::duration<double> &duration, fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], cudaStream_t streams[]) {
 
     // DEBUG: Copy h_data 
     // fType* h_data_debug[num_streams] = {nullptr};
@@ -49,7 +49,7 @@ int run_arccos(int size, int num_streams, std::chrono::duration<double> &duratio
 
     // Launch operations in streams
     auto start = std::chrono::high_resolution_clock::now();
-    cudaError_t err = run_stream_operations(h_data, h_result, d_data, streams, size_per_stream, num_streams, threads, blocks);
+    cudaError_t err = run_stream_operations(h_data, h_result, d_data, streams, num_arccos_calls, size_per_stream, num_streams, threads, blocks);
     auto end = std::chrono::high_resolution_clock::now();
 
     // Calculate duration
@@ -74,7 +74,7 @@ int run_arccos(int size, int num_streams, std::chrono::duration<double> &duratio
 
 }
 
-int init_data(fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], size_t bytes, cudaStream_t streams[], int num_streams, int size_per_stream) {
+int init_data(fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], size_t bytes, cudaStream_t streams[], int num_arccos_calls, int num_streams, int size_per_stream) {
     
     // Set up RNG
     std::mt19937 gen(SEED);
@@ -105,22 +105,27 @@ int init_data(fType* h_data[], fType* h_result[], fType* h_reference[], fType* d
         cudaStreamCreate(&streams[i]);
 
         // Initialize host data and reference data
-        init_h_local(h_data[i], h_reference[i], i, size_per_stream, gen, dis);
+        init_h_local(h_data[i], h_reference[i], i, num_arccos_calls, size_per_stream, gen, dis);
     }
     return 0; // Return 0 on success
 }
 
-void init_h_local(fType* h_data, fType* h_result, int i, int chunksize, std::mt19937 &gen, std::uniform_real_distribution<fType> &dis) {
+void init_h_local(fType* h_data, fType* h_result, int i, int num_arccos_calls, int chunksize, std::mt19937 &gen, std::uniform_real_distribution<fType> &dis) {
     
     // Initialize data with random values in the range [-1, 1]
     for (int j = 0; j < chunksize; ++j) {
         h_data[j] = dis(gen); // Example initialization
-        h_result[j] = std::acos(h_data[j]); // Precompute the expected result
+        
+        // Precompute the expected result
+        h_result[j] = std::acos(h_data[j]);
+        for (int k = 1; k < num_arccos_calls; ++k) {
+            h_result[j] = std::acos(h_result[j]); // Apply arccos multiple times
+        }
     }
 }
 
 // Run stream operations
-cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_data[], cudaStream_t streams[], int size_per_stream, int num_streams,
+cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_data[], cudaStream_t streams[], int num_arccos_calls, int size_per_stream, int num_streams,
                                      int threads, int blocks) {
     // Loop through each stream and perform operations
     for (int i = 0; i < num_streams; ++i) {
@@ -129,7 +134,7 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
             std::cerr << "Memcpy (H2D) failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
             return err;
         }
-        compute_kernel_once<<<blocks, threads, 0, streams[i]>>>(d_data[i], size_per_stream);
+        compute_kernel_multiple<<<blocks, threads, 0, streams[i]>>>(d_data[i], size_per_stream, num_arccos_calls);
         err = cudaGetLastError();
         if (err != cudaSuccess) {
             std::cerr << "Kernel launch failed in stream " << i << ": " << cudaGetErrorString(err) << std::endl;
