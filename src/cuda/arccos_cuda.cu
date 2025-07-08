@@ -68,7 +68,7 @@ int run_arccos(int num_arccos_calls, int size, int num_streams, std::chrono::dur
     //     correct_result = verify_result(h_result, h_data, size_per_stream, num_streams);
     // }
 
-    correct_result = verify_result(h_reference, h_result, size_per_stream, num_streams);
+    correct_result = verify_result(h_reference, h_result, size_per_stream, num_streams, num_arccos_calls);
 
     return correct_result ? 0 : 1; // Return 0 if all results are correct, otherwise return 1
 
