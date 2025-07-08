@@ -18,34 +18,45 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
     inField.allocateDevice();
     outField.allocateDevice();
     
-    // Create temporary field for GPU computation
-    Storage3D<double> tmp1Field(x, y, 1, halo); // Only need 2D temporary field
+    // Create temporary field for GPU computation - needs to be same size as input
+    Storage3D<double> tmp1Field(x, y, z, halo); 
     tmp1Field.allocateDevice();
     
     // Copy input data to device
     inField.copyToDevice();
+    
+    // Check for CUDA errors after setup
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        std::cerr << "CUDA setup error: " << cudaGetErrorString(error) << std::endl;
+        return;
+    }
     
     // Set up CUDA execution configuration
     dim3 blockSize(16, 16);
     dim3 gridSize((x + halo * 2 + blockSize.x - 1) / blockSize.x,
                   (y + halo * 2 + blockSize.y - 1) / blockSize.y);
     
+    std::cout << "Grid size: " << gridSize.x << "x" << gridSize.y << std::endl;
+    std::cout << "Block size: " << blockSize.x << "x" << blockSize.y << std::endl;
+    dim3 haloBlockSize(16, 16, 1);
+    dim3 haloGridSize((x + haloBlockSize.x - 1) / haloBlockSize.x,
+                     (y + haloBlockSize.y - 1) / haloBlockSize.y,
+                     (z + haloBlockSize.z - 1) / haloBlockSize.z);
+    
     for (unsigned iter = 0; iter < numIter; ++iter) {
-        // Update halo on device (simplified - you may want to implement this properly)
-        // For now, copy to host, update halo, copy back
-        inField.copyFromDevice();
-        updateHalo(inField);
-        inField.copyToDevice();
+        // GPU halo update - much faster than CPU version!
+        updateHaloKernel2D<<<haloGridSize, haloBlockSize>>>(
+            inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
+        );
+        
+        cudaDeviceSynchronize(); // Ensure halo update completes
         
         for (int k = 0; k < z; ++k) {
-            // Launch diffusion kernel
             diffusionStepKernel<<<gridSize, blockSize>>>(
-                inField.deviceData(), tmp1Field.deviceData(), outField.deviceData(),
-                inField.xSize(), inField.ySize(), z, halo, alpha, k, 
-                (iter == numIter - 1)
+                inField.deviceData(), outField.deviceData(), tmp1Field.deviceData(),
+                inField.xSize(), inField.ySize(), inField.zMax(), k, halo, alpha
             );
-            
-            cudaDeviceSynchronize();
         }
         
         // If not the last iteration, copy output back to input

@@ -3,9 +3,7 @@
 
 __global__ void updateHaloKernel(double* field, int xsize, int ysize, int zsize, int halo);
 
-__global__ void laplacianKernel(double* inField, double* outField, 
-                               int xsize, int ysize, int zsize, int halo, int k_level);
+__global__ void diffusionStepKernel(double* inField, double* outField, double* tmp1Field,
+                                    int xsize, int ysize, int zsize, int k_level, int halo, double alpha);
 
-__global__ void diffusionStepKernel(double* inField, double* tmp1Field, double* outField,
-                                   int xsize, int ysize, int zsize, int halo, 
-                                   double alpha, int k_level, bool isLastIter);
+__global__ void updateHaloKernel2D(double* field, int xsize, int ysize, int zsize, int halo);

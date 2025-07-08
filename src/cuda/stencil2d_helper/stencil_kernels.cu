@@ -1,74 +1,124 @@
 #include "stencil_kernels.cuh"
 
-__device__ double device_access(double* data, int i, int j, int k, int xsize, int ysize) {
-    return data[i + j * xsize + k * xsize * ysize];
-}
-
-__device__ void device_set(double* data, int i, int j, int k, int xsize, int ysize, double value) {
-    data[i + j * xsize + k * xsize * ysize] = value;
-}
-
 __global__ void updateHaloKernel(double* field, int xsize, int ysize, int zsize, int halo) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Calculate total number of halo points per z-level
     int xInterior = xsize - 2 * halo;
     int yInterior = ysize - 2 * halo;
     
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int total_halo_points = xInterior * halo * zsize * 2 + // top/bottom edges
-                           yInterior * halo * zsize * 2;   // left/right edges
+    // Halo points per z-level:
+    // - Top/bottom edges: 2 * xInterior * halo
+    // - Left/right edges: 2 * ysize * halo (includes corners)
+    int haloPointsPerZ = 2 * xInterior * halo + 2 * ysize * halo;
+    int totalHaloPoints = haloPointsPerZ * zsize;
     
-    if (idx >= total_halo_points) return;
+    if (idx >= totalHaloPoints) return;
     
-    // This is a simplified version - you may need to implement more sophisticated indexing
-    // for better performance
-}
-
-__global__ void laplacianKernel(double* inField, double* outField, 
-                               int xsize, int ysize, int zsize, int halo, int k_level) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x + halo;
-    int j = blockIdx.y * blockDim.y + threadIdx.y + halo;
+    // Determine which z-level this thread handles
+    int k = idx / haloPointsPerZ;
+    int localIdx = idx % haloPointsPerZ;
     
-    if (i >= xsize - halo || j >= ysize - halo) return;
+    // Base offset for this z-level
+    int zOffset = k * xsize * ysize;
     
-    int idx = i + j * xsize + k_level * xsize * ysize;
-    
-    outField[idx] = -4.0 * inField[idx] + 
-                    inField[idx - 1] +           // i-1
-                    inField[idx + 1] +           // i+1  
-                    inField[idx - xsize] +       // j-1
-                    inField[idx + xsize];        // j+1
-}
-
-__global__ void diffusionStepKernel(double* inField, double* tmp1Field, double* outField,
-                                   int xsize, int ysize, int zsize, int halo, 
-                                   double alpha, int k_level, bool isLastIter) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x + halo;
-    int j = blockIdx.y * blockDim.y + threadIdx.y + halo;
-    
-    if (i >= xsize - halo || j >= ysize - halo) return;
-    
-    int idx = i + j * xsize + k_level * xsize * ysize;
-    int tmp_idx = i + j * xsize; // tmp1Field is 2D
-    
-    // First laplacian - store in tmp1Field
-    tmp1Field[tmp_idx] = -4.0 * inField[idx] + 
-                        inField[idx - 1] +           // i-1
-                        inField[idx + 1] +           // i+1  
-                        inField[idx - xsize] +       // j-1
-                        inField[idx + xsize];        // j+1
-    
-    __syncthreads();
-    
-    // Second laplacian
-    double laplap = -4.0 * tmp1Field[tmp_idx] + 
-                    tmp1Field[tmp_idx - 1] +         // i-1
-                    tmp1Field[tmp_idx + 1] +         // i+1
-                    tmp1Field[tmp_idx - xsize] +     // j-1
-                    tmp1Field[tmp_idx + xsize];      // j+1
-    
-    // Update field
-    if (isLastIter) {
-        outField[idx] = inField[idx] - alpha * laplap;
+    if (localIdx < 2 * xInterior * halo) {
+        // Handle top/bottom edges
+        int edgeIdx = localIdx;
+        int isBottom = (edgeIdx < xInterior * halo) ? 1 : 0;
+        int pos = edgeIdx % (xInterior * halo);
+        int row = pos / xInterior;
+        int col = pos % xInterior;
+        
+        int srcI = halo + col;
+        int srcJ = isBottom ? halo : (yInterior + halo - 1);
+        int dstJ = isBottom ? row : (ysize - 1 - row);
+        
+        int srcIdx = zOffset + srcI + srcJ * xsize;
+        int dstIdx = zOffset + srcI + dstJ * xsize;
+        
+        field[dstIdx] = field[srcIdx];
     } else {
-        inField[idx] = inField[idx] - alpha * laplap;
+        // Handle left/right edges (including corners)
+        int edgeIdx = localIdx - 2 * xInterior * halo;
+        int isLeft = (edgeIdx < ysize * halo) ? 1 : 0;
+        int pos = edgeIdx % (ysize * halo);
+        int col = pos / ysize;
+        int row = pos % ysize;
+        
+        int srcI = isLeft ? halo : (xInterior + halo - 1);
+        int dstI = isLeft ? col : (xsize - 1 - col);
+        
+        int srcIdx = zOffset + srcI + row * xsize;
+        int dstIdx = zOffset + dstI + row * xsize;
+        
+        field[dstIdx] = field[srcIdx];
+    }
+}
+
+__global__ void diffusionStepKernel(double* inField, double* outField, double* tmp1Field,
+                                   int xsize, int ysize, int zsize, int k_level, int halo, double alpha) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    
+    // Add halo offset
+    i += halo;
+    j += halo;
+    
+    if (i >= xsize - halo || j >= ysize - halo) return;
+    
+    int idx = i + j * xsize + k_level * xsize * ysize;
+    
+    // First Laplacian: inField -> tmp1Field
+    tmp1Field[idx] = 20. * inField[idx] - 
+                     8. * inField[idx - 1] - 8. * inField[idx + 1] - 8. * 
+                     inField[idx - xsize] - 8. * inField[idx + xsize] +
+                     2. * inField[idx - xsize - 1] + 2. * inField[idx + xsize + 1] +
+                     2. * inField[idx - xsize + 1] + 2. * inField[idx + xsize - 1] +
+                     inField[idx - 2 * xsize] + inField[idx + 2 * xsize] + inField[idx - 2] + inField[idx + 2];
+    
+    // Apply diffusion step: out = in - alpha * laplap
+    outField[idx] = inField[idx] - alpha * tmp1Field[idx];
+}
+
+__global__ void updateHaloKernel2D(double* field, int xsize, int ysize, int zsize, int halo) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int k = blockIdx.z * blockDim.z + threadIdx.z;
+    
+    if (k >= zsize) return;
+    
+    int zOffset = k * xsize * ysize;
+    int xInterior = xsize - 2 * halo;
+    int yInterior = ysize - 2 * halo;
+    
+    // Update halo regions for this z-level
+    
+    // Bottom edge (excluding corners)
+    if (i < xInterior && j < halo) {
+        int srcIdx = zOffset + (halo + i) + halo * xsize;
+        int dstIdx = zOffset + (halo + i) + j * xsize;
+        field[dstIdx] = field[srcIdx];
+    }
+    
+    // Top edge (excluding corners)  
+    if (i < xInterior && j >= ysize - halo && j < ysize) {
+        int srcIdx = zOffset + (halo + i) + (yInterior + halo - 1) * xsize;
+        int dstIdx = zOffset + (halo + i) + j * xsize;
+        field[dstIdx] = field[srcIdx];
+    }
+    
+    // Left edge (including corners)
+    if (i < halo && j < ysize) {
+        int srcIdx = zOffset + halo + j * xsize;
+        int dstIdx = zOffset + i + j * xsize;
+        field[dstIdx] = field[srcIdx];
+    }
+    
+    // Right edge (including corners)
+    if (i >= xsize - halo && i < xsize && j < ysize) {
+        int srcIdx = zOffset + (xInterior + halo - 1) + j * xsize;
+        int dstIdx = zOffset + i + j * xsize;
+        field[dstIdx] = field[srcIdx];
     }
 }

@@ -80,10 +80,10 @@ public:
 
   void initialize() {
     for (std::size_t k = zsize_ / 4.0; k < 3 * zsize_ / 4.0; ++k) {
-      for (std::size_t j = halosize_ + xsize_ / 4.;
-           j < halosize_ + 3. / 4. * xsize_; ++j) {
-        for (std::size_t i = halosize_ + xsize_ / 4.;
-             i < halosize_ + 3. / 4. * xsize_; ++i) {
+      for (std::size_t j = ysize_ / 4.;
+           j < 3. / 4. * ysize_; ++j) {
+        for (std::size_t i = xsize_ / 4.;
+             i < 3. / 4. * xsize_; ++i) {
           operator()(i, j, k) = 1;
         }
       }
