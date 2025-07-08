@@ -37,16 +37,18 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
     dim3 gridSize((x + halo * 2 + blockSize.x - 1) / blockSize.x,
                   (y + halo * 2 + blockSize.y - 1) / blockSize.y);
     
-    std::cout << "Grid size: " << gridSize.x << "x" << gridSize.y << std::endl;
-    std::cout << "Block size: " << blockSize.x << "x" << blockSize.y << std::endl;
-    dim3 haloBlockSize(16, 16, 1);
-    dim3 haloGridSize((x + haloBlockSize.x - 1) / haloBlockSize.x,
-                     (y + haloBlockSize.y - 1) / haloBlockSize.y,
-                     (z + haloBlockSize.z - 1) / haloBlockSize.z);
+    // Calculate total halo points for 1D kernel
+    int haloPointsPerZ = 2 * x * halo + 2 * (y + 2 * halo) * halo;
+    int totalHaloPoints = haloPointsPerZ * z;
+    
+    // 1D thread configuration for halo update
+    int haloThreadsPerBlock = 512; 
+    int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
+    
     
     for (unsigned iter = 0; iter < numIter; ++iter) {
-        // GPU halo update - much faster than CPU version!
-        updateHaloKernel2D<<<haloGridSize, haloBlockSize>>>(
+        // GPU halo update
+        updateHaloKernel2D<<<haloBlocks, haloThreadsPerBlock>>>(
             inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
         );
         
