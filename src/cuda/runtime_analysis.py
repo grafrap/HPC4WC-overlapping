@@ -15,13 +15,14 @@ def extract_data(filename):
                 line = line.replace("###", "")
                 parts = line.strip().split()
                 try:
-                    size = int(parts[0])
-                    num_streams = int(parts[1])
-                    time = float(parts[2])
-                    data.append((size, num_streams, time))
+                    num_reps = int(parts[0])
+                    size = int(parts[1])
+                    num_streams = int(parts[2])
+                    time = float(parts[3])
+                    data.append((num_reps, size, num_streams, time))
                 except Exception as e:
                     print(f"Skipping line (parsing error): {line}")
-    return pd.DataFrame(data, columns=["Size", "NUM_STREAMS", "Time"])
+    return pd.DataFrame(data, columns=["Num_Repetitions","Size", "Num_Streams", "Time"])
 
     
 

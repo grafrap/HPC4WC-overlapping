@@ -32,13 +32,14 @@ __global__ void updateHaloKernel(double* field, int xsize, int ysize, int zsize,
         
         int srcI = halo + col;
         int srcJ = isBottom ? halo : (yInterior + halo - 1);
-        int dstJ = isBottom ? row : (ysize - 1 - row);
+        int dstJ = isBottom ? row : (row + halo + yInterior);
         
         int srcIdx = zOffset + srcI + srcJ * xsize;
         int dstIdx = zOffset + srcI + dstJ * xsize;
         
         field[dstIdx] = field[srcIdx];
-    } else {
+    } 
+    else {
         // Handle left/right edges (including corners)
         int edgeIdx = localIdx - 2 * xInterior * halo;
         int isLeft = (edgeIdx < ysize * halo) ? 1 : 0;
@@ -47,7 +48,7 @@ __global__ void updateHaloKernel(double* field, int xsize, int ysize, int zsize,
         int row = pos % ysize;
         
         int srcI = isLeft ? halo : (xInterior + halo - 1);
-        int dstI = isLeft ? col : (xsize - 1 - col);
+        int dstI = isLeft ? col : (xsize - halo + col);
         
         int srcIdx = zOffset + srcI + row * xsize;
         int dstIdx = zOffset + dstI + row * xsize;

@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64              # Max CPU cores per task (adjust based on node)
 #SBATCH --gres=gpu:1                    # Request 1 GPU
-#SBATCH --time=00:15:00                 # Max runtime
+#SBATCH --time=12:00:00                 # Max runtime
 #SBATCH --exclusive                     # Get the whole node
 
 echo "Job started on $(hostname)"
@@ -27,7 +27,7 @@ make
 
 
 # warm up run
-./cuda_arccos 1024 4 10 > /dev/null
+./cuda_arccos 1 1024 4 10 > /dev/null
 
 # Create a timestamp for output file if not running via SLURM
 if [ -z "$SLURM_JOB_ID" ]; then
@@ -48,16 +48,20 @@ echo "Saving results to: $OUTPUT_FILE"
 echo "Beginning performance tests..." | tee -a $OUTPUT_FILE
 echo "Errors will be logged to: $ERROR_FILE"
 
-for ((k=3; k<10; k+= 2))
-    do
-    for ((i=0; i<10; i+= 1))
+for ((rep=0; rep<10; rep+=1))
+do
+    REPS=$((2**rep))
+    for ((k=3; k<30; k+= 2))
         do
-            SIZE=$((2**k))
-            echo "Testing array size: $SIZE with $((2**i)) streams" | tee -a $OUTPUT_FILE
-            ./cuda_arccos $SIZE $((2**i)) 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
-            # ./cuda_arccos $SIZE 4 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
+        for ((i=0; i<10; i+= 1))
+            do
+                SIZE=$((2**k))
+                # echo "Testing array size: $SIZE with $((2**i)) streams and $REPS repetitions" | tee -a $OUTPUT_FILE
+                ./cuda_arccos $REPS $SIZE $((2**i)) 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
+                # ./cuda_arccos $SIZE 4 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
+            done
         done
-    done
+done
 
 source ~/HPC4WC_venv/bin/activate
 python ../src/cuda/runtime_analysis.py $OUTPUT_FILE
