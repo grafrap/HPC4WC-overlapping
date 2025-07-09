@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
     }
 
     if (size % num_streams != 0) {
-        std::cerr << "Size must be divisible by number of streams." << std::endl;
+        std::cerr << "Size (" << size << ") must be divisible by number of streams (" << num_streams << ")." << std::endl;
         return 1;
     }
 
