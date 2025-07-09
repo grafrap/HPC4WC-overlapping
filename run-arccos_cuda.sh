@@ -53,7 +53,7 @@ for ((j=0; j<10; j+= 1))
     NUM_ARCCOS=$((2**j))
     for ((k=3; k<10; k+= 2))
         do
-        for ((i=0; i<10; i+= 1))
+        for ((i=0; i<=k && i<=10; i+= 1))
             do
                 SIZE=$((2**k))
                 # echo "Testing array size: $SIZE with $((2**i)) streams and $NUM_ARCCOS arccos calls" | tee -a $OUTPUT_FILE
