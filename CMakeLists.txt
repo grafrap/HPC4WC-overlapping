@@ -106,3 +106,12 @@ set(STENCIL_SOURCES
 
 add_executable(stencil2d_gpu ${STENCIL_SOURCES})
 target_include_directories(stencil2d_gpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cuda)
+
+# Add stencil GPU executable with multiple streams
+set(STENCIL_STREAM_SOURCES
+    src/cuda/stencil2d-gpu_streams.cu
+    src/cuda/stencil2d_helper/stencil_kernels.cu
+)
+
+add_executable(stencil2d_gpu_streams ${STENCIL_STREAM_SOURCES})
+target_include_directories(stencil2d_gpu_streams PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cuda)

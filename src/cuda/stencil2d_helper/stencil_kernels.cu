@@ -95,30 +95,30 @@ __global__ void updateHaloKernel2D(double* field, int xsize, int ysize, int zsiz
     
     // Update halo regions for this z-level
     
-    // Bottom edge (excluding corners)
+    // Bottom edge (excluding corners) - map to top of interior
     if (i < xInterior && j < halo) {
-        int srcIdx = zOffset + (halo + i) + halo * xsize;
+        int srcIdx = zOffset + (halo + i) + (j + yInterior) * xsize;
         int dstIdx = zOffset + (halo + i) + j * xsize;
         field[dstIdx] = field[srcIdx];
     }
     
-    // Top edge (excluding corners)  
+    // Top edge (excluding corners) - map to bottom of interior  
     if (i < xInterior && j >= ysize - halo && j < ysize) {
-        int srcIdx = zOffset + (halo + i) + (yInterior + halo - 1) * xsize;
+        int srcIdx = zOffset + (halo + i) + (j - yInterior) * xsize;
         int dstIdx = zOffset + (halo + i) + j * xsize;
         field[dstIdx] = field[srcIdx];
     }
     
-    // Left edge (including corners)
+    // Left edge (including corners) - map to right of interior
     if (i < halo && j < ysize) {
-        int srcIdx = zOffset + halo + j * xsize;
+        int srcIdx = zOffset + (i + xInterior) + j * xsize;
         int dstIdx = zOffset + i + j * xsize;
         field[dstIdx] = field[srcIdx];
     }
     
-    // Right edge (including corners)
+    // Right edge (including corners) - map to left of interior
     if (i >= xsize - halo && i < xsize && j < ysize) {
-        int srcIdx = zOffset + (xInterior + halo - 1) + j * xsize;
+        int srcIdx = zOffset + (i - xInterior) + j * xsize;
         int dstIdx = zOffset + i + j * xsize;
         field[dstIdx] = field[srcIdx];
     }
