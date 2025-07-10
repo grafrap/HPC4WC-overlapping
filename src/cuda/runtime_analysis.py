@@ -29,7 +29,7 @@ def extract_data(filename):
                         size = int(parts[1])
                         num_streams = int(parts[2])
                         time = float(parts[3])
-                        data.append((size, num_streams, time))
+                        data.append((calls, size, num_streams, time))
                     except Exception as e:
                         print(f"Skipping line (parsing error): {line}")
                     colnames = ["Calls", "Size", "NUM_STREAMS", "Time"]
