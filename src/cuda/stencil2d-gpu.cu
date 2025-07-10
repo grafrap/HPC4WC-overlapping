@@ -44,21 +44,29 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
                      (inField.ySize() + haloBlockSize.y - 1) / haloBlockSize.y,
                      (z + haloBlockSize.z - 1) / haloBlockSize.z);
         // Calculate total halo points for 1D kernel
-    // int xInterior = x;
-    // int yInterior = y;
-    // int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
-    // int totalHaloPoints = haloPointsPerZ * z;
+    int xInterior = x;
+    int yInterior = y;
+    int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
+    int totalHaloPoints = haloPointsPerZ * z;
     
-    // // 1D thread configuration for halo update
-    // int haloThreadsPerBlock = 256;  // Best joice by testing
-    // int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
+    // 1D thread configuration for halo update
+    int haloThreadsPerBlock = 256;  // Best joice by testing
+    int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
     
     
     for (unsigned iter = 0; iter < numIter; ++iter) {
         // GPU halo update
-        updateHaloKernel2D<<<haloGridSize, haloBlockSize>>>(
-            inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
+        // updateHaloKernel2D<<<haloGridSize, haloBlockSize>>>(
+        //     inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
+        // );
+        // inField.copyFromDevice();
+        // updateHalo(inField);
+        // inField.copyToDevice();
+        updateHaloKernel<<<haloBlocks, haloThreadsPerBlock>>>(
+        inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
         );
+        
+        // cudaDeviceSynchronize();
         
         cudaDeviceSynchronize(); // Ensure halo update completes
         
@@ -67,6 +75,7 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
                 inField.deviceData(), outField.deviceData(), tmp1Field.deviceData(),
                 inField.xSize(), inField.ySize(), inField.zMax(), k, halo, alpha
             );
+            cudaDeviceSynchronize(); // Ensure each step completes
         }
         
         // If not the last iteration, copy output back to input

@@ -29,13 +29,13 @@ echo "Build completed, testing GPU stencil executable..."
 
 # Test with different problem sizes
 echo "=== Testing small problem size ==="
-./stencil2d_gpu -nx 32 -ny 32 -nz 32 -iter 1024
+./stencil2d_gpu_streams -nx 32 -ny 32 -nz 32 -iter 1024 -streams 4
 
 # echo "=== Testing medium problem size ==="
-# ./stencil2d_gpu -nx 64 -ny 64 -nz 64 -iter 1024
+# ./stencil2d_gpu_streams -nx 64 -ny 64 -nz 64 -iter 1024 -streams 4
 
 # echo "=== Testing larger problem size ==="
-# ./stencil2d_gpu -nx 128 -ny 128 -nz 128 -iter 10
+# ./stencil2d_gpu_streams -nx 128 -ny 128 -nz 128 -iter 10 -streams 4
 
 # echo "=== Comparing with CPU version (if available) ==="
 # if [ -f "../src/cuda/stencil2d_helper/stencil2d-base" ]; then

@@ -31,7 +31,7 @@ __global__ void updateHaloKernel(double* field, int xsize, int ysize, int zsize,
         int col = pos % xInterior;
         
         int srcI = halo + col;
-        int srcJ = isBottom ? halo : (yInterior + halo - 1);
+        int srcJ = isBottom ? (row + yInterior) : (halo + row);
         int dstJ = isBottom ? row : (row + halo + yInterior);
         
         int srcIdx = zOffset + srcI + srcJ * xsize;
@@ -47,11 +47,12 @@ __global__ void updateHaloKernel(double* field, int xsize, int ysize, int zsize,
         int col = pos / ysize;
         int row = pos % ysize;
         
-        int srcI = isLeft ? halo : (xInterior + halo - 1);
-        int dstI = isLeft ? col : (xsize - halo + col);
+        int srcJ = row;
+        int srcI = isLeft ? col + xInterior : (halo + col);
+        int dstI = isLeft ? col : (col + halo + xInterior);
         
-        int srcIdx = zOffset + srcI + row * xsize;
-        int dstIdx = zOffset + dstI + row * xsize;
+        int srcIdx = zOffset + srcI + srcJ * xsize;
+        int dstIdx = zOffset + dstI + srcJ * xsize;
         
         field[dstIdx] = field[srcIdx];
     }

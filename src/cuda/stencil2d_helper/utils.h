@@ -108,9 +108,10 @@ private:
 void updateHalo(Storage3D<double> &inField) {
   const int xInterior = inField.xMax() - inField.xMin();
   const int yInterior = inField.yMax() - inField.yMin();
+  const int zInterior = inField.zMax(); // Process all z-levels
 
-  // bottom edge (without corners)
-  for (std::size_t k = 0; k < inField.zMin(); ++k) {
+  // bottom edge (without corners): map to top of interior
+  for (std::size_t k = 0; k < zInterior; ++k) {
     for (std::size_t j = 0; j < inField.yMin(); ++j) {
       for (std::size_t i = inField.xMin(); i < inField.xMax(); ++i) {
         inField(i, j, k) = inField(i, j + yInterior, k);
@@ -118,8 +119,8 @@ void updateHalo(Storage3D<double> &inField) {
     }
   }
 
-  // top edge (without corners)
-  for (std::size_t k = 0; k < inField.zMin(); ++k) {
+  // top edge (without corners): map to bottom of interior  
+  for (std::size_t k = 0; k < zInterior; ++k) {
     for (std::size_t j = inField.yMax(); j < inField.ySize(); ++j) {
       for (std::size_t i = inField.xMin(); i < inField.xMax(); ++i) {
         inField(i, j, k) = inField(i, j - yInterior, k);
@@ -127,18 +128,18 @@ void updateHalo(Storage3D<double> &inField) {
     }
   }
 
-  // left edge (including corners)
-  for (std::size_t k = 0; k < inField.zMin(); ++k) {
-    for (std::size_t j = inField.yMin(); j < inField.yMax(); ++j) {
+  // left edge (including corners): map to right of interior
+  for (std::size_t k = 0; k < zInterior; ++k) {
+    for (std::size_t j = 0; j < inField.ySize(); ++j) {
       for (std::size_t i = 0; i < inField.xMin(); ++i) {
         inField(i, j, k) = inField(i + xInterior, j, k);
       }
     }
   }
 
-  // right edge (including corners)
-  for (std::size_t k = 0; k < inField.zMin(); ++k) {
-    for (std::size_t j = inField.yMin(); j < inField.yMax(); ++j) {
+  // right edge (including corners): map to left of interior
+  for (std::size_t k = 0; k < zInterior; ++k) {
+    for (std::size_t j = 0; j < inField.ySize(); ++j) {
       for (std::size_t i = inField.xMax(); i < inField.xSize(); ++i) {
         inField(i, j, k) = inField(i - xInterior, j, k);
       }

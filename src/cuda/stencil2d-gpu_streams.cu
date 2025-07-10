@@ -90,13 +90,12 @@ void apply_diffusion_gpu_streams(Storage3D<double> &inField, Storage3D<double> &
     outField.copyFromDevice();
 }
 
-void reportTime(const Storage3D<double> &storage, int nIter, double diff) {
-    std::cout << "# ranks nx ny nz num_iter time\ndata = np.array( [ \\\n";
+void reportTime(const Storage3D<double> &storage, int nIter, double diff, int nStreams = 1) {
+    std::cout << "# ranks nx ny nz num_iter time\n";
     int size = 1; // Assuming single GPU
-    std::cout << "[ " << size << ", " << storage.xMax() - storage.xMin() << ", "
+    std::cout << size << ", " << storage.xMax() - storage.xMin() << ", "
               << storage.yMax() - storage.yMin() << ", " << storage.zMax() << ", "
-              << nIter << ", " << diff << "],\n";
-    std::cout << "] )" << std::endl;
+              << nIter << ", " << diff << ", " << nStreams << "\n" ;
 }
 
 int main(int argc, char const *argv[]) {
@@ -126,7 +125,7 @@ int main(int argc, char const *argv[]) {
 
     // Write initial field
     std::ofstream fout;
-    fout.open("in_field.dat", std::ios::binary | std::ofstream::trunc);
+    fout.open("in_field_streams.dat", std::ios::binary | std::ofstream::trunc);
     input.writeFile(fout);
     fout.close();
 
@@ -143,13 +142,13 @@ int main(int argc, char const *argv[]) {
 #endif
 
     updateHalo(output);
-    fout.open("out_field.dat", std::ios::binary | std::ofstream::trunc);
+    fout.open("out_field_streams.dat", std::ios::binary | std::ofstream::trunc);
     output.writeFile(fout);
     fout.close();
 
     auto diff = end - start;
     double timeDiff = std::chrono::duration<double, std::milli>(diff).count() / 1000.;
-    reportTime(output, iter, timeDiff);
+    reportTime(output, iter, timeDiff, numStreams);
 
     return 0;
 }

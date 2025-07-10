@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64              # Max CPU cores per task (adjust based on node)
 #SBATCH --gres=gpu:1                    # Request 1 GPU
-#SBATCH --time=12:00:00                 # Max runtime
+#SBATCH --time=24:00:00                 # Max runtime
 #SBATCH --exclusive                     # Get the whole node
 
 echo "Job started on $(hostname)"
