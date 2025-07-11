@@ -46,23 +46,7 @@ for size in "${SIZES[@]}"; do
             TIME=$(echo $GPU_OUTPUT | sed 's/.*,\s*\([0-9.e-]*\)\s*].*/\1/')
             echo "${size},GPU,${iter},${TIME}" >> $PERF_FILE
             echo "GPU time: ${TIME} seconds"
-        fi
-        
-        # Compile and test CPU version if we can build it
-        if [ -f "../src/cuda/stencil2d_helper/stencil2d-base.cpp" ]; then
-            echo "Compiling CPU version..."
-            g++ -O3 -std=c++17 -o stencil2d_cpu ../src/cuda/stencil2d_helper/stencil2d-base.cpp 2>/dev/null
-            if [ -f "stencil2d_cpu" ]; then
-                echo "Running CPU version..."
-                CPU_OUTPUT=$(./stencil2d_cpu -nx $size -ny $size -nz $size -iter $iter 2>/dev/null | grep -E "^\[.*\]$" | tail -1)
-                if [ ! -z "$CPU_OUTPUT" ]; then
-                    TIME=$(echo $CPU_OUTPUT | sed 's/.*,\s*\([0-9.e-]*\)\s*].*/\1/')
-                    echo "${size},CPU,${iter},${TIME}" >> $PERF_FILE
-                    echo "CPU time: ${TIME} seconds"
-                fi
-            fi
-        fi
-        
+        fi        
         echo "---"
     done
 done

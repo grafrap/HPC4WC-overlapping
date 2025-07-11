@@ -5,11 +5,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
-#SBATCH --time=00:20:00
+#SBATCH --time=04:00:00
 #SBATCH --exclusive
-
-echo "Job started on $(hostname)"
-echo "Running GPU stencil scaling tests"
 
 # Create build directory if it doesn't exist
 mkdir -p build
@@ -21,29 +18,35 @@ export PATH=${CUDA_ROOT}/bin:$PATH
 export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 
 # Build the project
-/usr/bin/cmake -DCUDAToolkit_ROOT=${CUDA_ROOT} ..
-make
+/usr/bin/cmake -DCUDAToolkit_ROOT=${CUDA_ROOT} .. > /dev/null 2>&1
+make > /dev/null 2>&1
 
 # Create output file for results
 OUTPUT_FILE="../measurements/stencil_gpu_scaling_$SLURM_JOB_ID.out"
 ERROR_FILE="../measurements/stencil_gpu_scaling_$SLURM_JOB_ID.err"
 mkdir -p ../measurements
 
-echo "Saving results to: $OUTPUT_FILE"
-echo "Beginning GPU stencil scaling tests..." | tee -a $OUTPUT_FILE
+# Print header only once
+echo "ranks nx ny nz num_iter time num_streams" > $OUTPUT_FILE
 
-# Test scaling with different problem sizes (powers of 2)
-for ((k=5; k<=8; k++)); do
-    SIZE=$((2**k))
-    echo "Testing problem size: ${SIZE}x${SIZE}x${SIZE}" | tee -a $OUTPUT_FILE
-    ./stencil2d_gpu -nx $SIZE -ny $SIZE -nz $SIZE -iter 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
+# Four-dimensional loop for comprehensive testing
+# Loop 1: Number of streams (2^0 to 2^9 = 1 to 512)
+for ((stream_exp=0; stream_exp<=9; stream_exp++)); do
+    streams=$((2**stream_exp))
+    
+    # Loop 2: Problem sizes (xy dimensions, powers of 2 from 2^3 to 2^15)
+    for ((xy_exp=3; xy_exp<=15; xy_exp++)); do
+        XY_SIZE=$((2**xy_exp))
+        
+        # Loop 3: Z dimension (8 to 512, exponential steps)
+        for z_size in 8 16 32 64 128 256 512; do
+            # Loop 4: Iteration counts (2^0 to 2^15 = 1 to 32768)
+            for ((iter_exp=0; iter_exp<=15; iter_exp++)); do
+                iter=$((2**iter_exp))
+                
+                # Run the test and append results
+                ./stencil2d_gpu_streams -nx $XY_SIZE -ny $XY_SIZE -nz $z_size -iter $iter -streams $streams >> $OUTPUT_FILE 2>> $ERROR_FILE
+            done
+        done
+    done
 done
-
-# Test scaling with different iteration counts
-echo "Testing iteration scaling with fixed size 64x64x64:" | tee -a $OUTPUT_FILE
-for iter in 1 5 10 20 50; do
-    echo "Iterations: $iter" | tee -a $OUTPUT_FILE
-    ./stencil2d_gpu -nx 64 -ny 64 -nz 64 -iter $iter >> $OUTPUT_FILE 2>> $ERROR_FILE
-done
-
-echo "GPU stencil scaling tests completed"

@@ -210,7 +210,7 @@ void apply_diffusion_gpu_streams_advanced(Storage3D<double> &inField, Storage3D<
 }
 
 void reportTime(const Storage3D<double> &storage, int nIter, double diff, int nStreams = 1) {
-    std::cout << "ranks nx ny nz num_iter time num_streams\n";
+    // std::cout << "ranks nx ny nz num_iter time num_streams\n";
     int size = 1; // Assuming single GPU
     std::cout << "###" << size << ", " << storage.xMax() - storage.xMin() << ", "
               << storage.yMax() - storage.yMin() << ", " << storage.zMax() << ", "
