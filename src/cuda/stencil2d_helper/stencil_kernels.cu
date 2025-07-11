@@ -46,13 +46,16 @@ __global__ void updateHaloKernel(double* field, int xsize, int ysize, int zsize,
         int pos = edgeIdx % (ysize * halo);
         int col = pos / ysize;
         int row = pos % ysize;
+
+        int isCorner = row < halo ? 1 : 0;
+        isCorner = row >= ysize - halo ? -1 : isCorner;
         
-        int srcJ = row;
+        int srcJ = row + isCorner * (yInterior);
         int srcI = isLeft ? col + xInterior : (halo + col);
         int dstI = isLeft ? col : (col + halo + xInterior);
         
         int srcIdx = zOffset + srcI + srcJ * xsize;
-        int dstIdx = zOffset + dstI + srcJ * xsize;
+        int dstIdx = zOffset + dstI + row * xsize;
         
         field[dstIdx] = field[srcIdx];
     }
@@ -82,45 +85,3 @@ __global__ void diffusionStepKernel(double* inField, double* outField, double* t
     // Apply diffusion step: out = in - alpha * laplap
     outField[idx] = inField[idx] - alpha * tmp1Field[idx];
 }
-
-// __global__ void updateHaloKernel2D(double* field, int xsize, int ysize, int zsize, int halo) {
-//     int i = blockIdx.x * blockDim.x + threadIdx.x;
-//     int j = blockIdx.y * blockDim.y + threadIdx.y;
-//     int k = blockIdx.z * blockDim.z + threadIdx.z;
-    
-//     if (k >= zsize) return;
-    
-//     int zOffset = k * xsize * ysize;
-//     int xInterior = xsize - 2 * halo;
-//     int yInterior = ysize - 2 * halo;
-    
-//     // Update halo regions for this z-level
-    
-//     // Bottom edge (excluding corners) - map to top of interior
-//     if (i < xInterior && j < halo) {
-//         int srcIdx = zOffset + (halo + i) + (j + yInterior) * xsize;
-//         int dstIdx = zOffset + (halo + i) + j * xsize;
-//         field[dstIdx] = field[srcIdx];
-//     }
-    
-//     // Top edge (excluding corners) - map to bottom of interior  
-//     if (i < xInterior && j >= ysize - halo && j < ysize) {
-//         int srcIdx = zOffset + (halo + i) + (j - yInterior) * xsize;
-//         int dstIdx = zOffset + (halo + i) + j * xsize;
-//         field[dstIdx] = field[srcIdx];
-//     }
-    
-//     // Left edge (including corners) - map to right of interior
-//     if (i < halo && j < ysize) {
-//         int srcIdx = zOffset + (i + xInterior) + j * xsize;
-//         int dstIdx = zOffset + i + j * xsize;
-//         field[dstIdx] = field[srcIdx];
-//     }
-    
-//     // Right edge (including corners) - map to left of interior
-//     if (i >= xsize - halo && i < xsize && j < ysize) {
-//         int srcIdx = zOffset + (i - xInterior) + j * xsize;
-//         int dstIdx = zOffset + i + j * xsize;
-//         field[dstIdx] = field[srcIdx];
-//     }
-// }

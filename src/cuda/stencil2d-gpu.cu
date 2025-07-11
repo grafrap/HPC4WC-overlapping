@@ -56,18 +56,10 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
     
     for (unsigned iter = 0; iter < numIter; ++iter) {
         // GPU halo update
-        // updateHaloKernel2D<<<haloGridSize, haloBlockSize>>>(
-        //     inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
-        // );
-        // inField.copyFromDevice();
-        // updateHalo(inField);
-        // inField.copyToDevice();
         updateHaloKernel<<<haloBlocks, haloThreadsPerBlock>>>(
         inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
         );
-        
-        // cudaDeviceSynchronize();
-        
+                
         cudaDeviceSynchronize(); // Ensure halo update completes
         
         for (int k = 0; k < z; ++k) {
@@ -75,8 +67,9 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
                 inField.deviceData(), outField.deviceData(), tmp1Field.deviceData(),
                 inField.xSize(), inField.ySize(), inField.zMax(), k, halo, alpha
             );
-            cudaDeviceSynchronize(); // Ensure each step completes
         }
+
+        cudaDeviceSynchronize(); // Ensure diffusion step completes
         
         // If not the last iteration, copy output back to input
         if (iter < numIter - 1) {
@@ -90,12 +83,11 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
 }
 
 void reportTime(const Storage3D<double> &storage, int nIter, double diff) {
-    std::cout << "# ranks nx ny nz num_iter time\ndata = np.array( [ \\\n";
+    std::cout << "ranks nx ny nz num_iter time\n";
     int size = 1; // Assuming single GPU
-    std::cout << "[ " << size << ", " << storage.xMax() - storage.xMin() << ", "
+    std::cout << size << ", " << storage.xMax() - storage.xMin() << ", "
               << storage.yMax() - storage.yMin() << ", " << storage.zMax() << ", "
-              << nIter << ", " << diff << "],\n";
-    std::cout << "] )" << std::endl;
+              << nIter << ", " << diff << "\n";
 }
 
 int main(int argc, char const *argv[]) {
@@ -140,7 +132,22 @@ int main(int argc, char const *argv[]) {
     PAT_record(PAT_STATE_OFF);
 #endif
 
-    updateHalo(output);
+    // updateHalo(output);
+    int xInterior = x;
+    int yInterior = y;
+    int haloPointsPerZ = 2 * xInterior * nHalo + 2 * (y + 2 * nHalo) * nHalo;
+    int totalHaloPoints = haloPointsPerZ * z;
+    
+    // 1D thread configuration for halo update
+    int haloThreadsPerBlock = 256;  // Best choice by testing
+    int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
+    
+    // Update halo on output field
+    updateHaloKernel<<<haloBlocks, haloThreadsPerBlock>>>(
+        output.deviceData(), output.xSize(), output.ySize(), output.zMax(), nHalo
+    );
+    cudaDeviceSynchronize(); // Ensure halo update completes
+    output.copyFromDevice();
     fout.open("out_field.dat", std::ios::binary | std::ofstream::trunc);
     output.writeFile(fout);
     fout.close();

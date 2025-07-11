@@ -44,10 +44,20 @@ void apply_diffusion_gpu_streams(Storage3D<double> &inField, Storage3D<double> &
     dim3 haloGridSize((inField.xSize() + haloBlockSize.x - 1) / haloBlockSize.x,
                      (inField.ySize() + haloBlockSize.y - 1) / haloBlockSize.y,
                      (z + haloBlockSize.z - 1) / haloBlockSize.z);
+
+    // Calculate total halo points for 1D kernel
+    int xInterior = x;
+    int yInterior = y;
+    int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
+    int totalHaloPoints = haloPointsPerZ * z;
+    
+    // 1D thread configuration for halo update
+    int haloThreadsPerBlock = 256;  // Best choice by testing
+    int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
     
     for (unsigned iter = 0; iter < numIter; ++iter) {
         // GPU halo update on first stream
-        updateHaloKernel2D<<<haloGridSize, haloBlockSize, 0, streams[0]>>>(
+        updateHaloKernel<<<haloBlocks, haloThreadsPerBlock, 0, streams[0]>>>(
             inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
         );
         
@@ -88,69 +98,6 @@ void apply_diffusion_gpu_streams(Storage3D<double> &inField, Storage3D<double> &
     
     // Copy final result back to host
     outField.copyFromDevice();
-}
-
-void reportTime(const Storage3D<double> &storage, int nIter, double diff, int nStreams = 1) {
-    std::cout << "# ranks nx ny nz num_iter time\n";
-    int size = 1; // Assuming single GPU
-    std::cout << size << ", " << storage.xMax() - storage.xMin() << ", "
-              << storage.yMax() - storage.yMin() << ", " << storage.zMax() << ", "
-              << nIter << ", " << diff << ", " << nStreams << "\n" ;
-}
-
-int main(int argc, char const *argv[]) {
-#ifdef CRAYPAT
-    PAT_record(PAT_STATE_OFF);
-#endif
-    if (argc != 11) {
-        std::cerr << "Usage: " << argv[0] << " -nx <x> -ny <y> -nz <z> -iter <iterations> -streams <numStreams>" << std::endl;
-        return 1;
-    }
-    
-    int x = atoi(argv[2]);
-    int y = atoi(argv[4]);
-    int z = atoi(argv[6]);
-    int iter = atoi(argv[8]);
-    int numStreams = atoi(argv[10]); // Number of streams from command line
-    int nHalo = 3;
-    
-    assert(x > 0 && y > 0 && z > 0 && iter > 0);
-    
-    Storage3D<double> input(x, y, z, nHalo);
-    input.initialize();
-    Storage3D<double> output(x, y, z, nHalo);
-    output.initialize();
-
-    double alpha = 1. / 32.;
-
-    // Write initial field
-    std::ofstream fout;
-    fout.open("in_field_streams.dat", std::ios::binary | std::ofstream::trunc);
-    input.writeFile(fout);
-    fout.close();
-
-#ifdef CRAYPAT
-    PAT_record(PAT_STATE_ON);
-#endif
-    auto start = std::chrono::steady_clock::now();
-
-    apply_diffusion_gpu_streams(input, output, alpha, iter, x, y, z, nHalo, numStreams);
-
-    auto end = std::chrono::steady_clock::now();
-#ifdef CRAYPAT
-    PAT_record(PAT_STATE_OFF);
-#endif
-
-    updateHalo(output);
-    fout.open("out_field_streams.dat", std::ios::binary | std::ofstream::trunc);
-    output.writeFile(fout);
-    fout.close();
-
-    auto diff = end - start;
-    double timeDiff = std::chrono::duration<double, std::milli>(diff).count() / 1000.;
-    reportTime(output, iter, timeDiff, numStreams);
-
-    return 0;
 }
 
 
@@ -198,13 +145,23 @@ void apply_diffusion_gpu_streams_advanced(Storage3D<double> &inField, Storage3D<
     dim3 haloGridSize((inField.xSize() + haloBlockSize.x - 1) / haloBlockSize.x,
                      (inField.ySize() + haloBlockSize.y - 1) / haloBlockSize.y,
                      (z + haloBlockSize.z - 1) / haloBlockSize.z);
+
+    // Calculate total halo points for 1D kernel
+    int xInterior = x;
+    int yInterior = y;
+    int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
+    int totalHaloPoints = haloPointsPerZ * z;
+    
+    // 1D thread configuration for halo update
+    int haloThreadsPerBlock = 256;  // Best joice by testing
+    int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
     
     for (unsigned iter = 0; iter < numIter; ++iter) {
         // Wait for previous transfer to complete
         cudaStreamSynchronize(streams[0]);
         
         // GPU halo update
-        updateHaloKernel2D<<<haloGridSize, haloBlockSize, 0, streams[1]>>>(
+        updateHaloKernel<<<haloBlocks, haloThreadsPerBlock, 0, streams[1]>>>(
             inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
         );
         
@@ -250,4 +207,67 @@ void apply_diffusion_gpu_streams_advanced(Storage3D<double> &inField, Storage3D<
     }
     cudaFreeHost(h_pinned_in);
     cudaFreeHost(h_pinned_out);
+}
+
+void reportTime(const Storage3D<double> &storage, int nIter, double diff, int nStreams = 1) {
+    std::cout << "ranks nx ny nz num_iter time num_streams\n";
+    int size = 1; // Assuming single GPU
+    std::cout << "###" << size << ", " << storage.xMax() - storage.xMin() << ", "
+              << storage.yMax() - storage.yMin() << ", " << storage.zMax() << ", "
+              << nIter << ", " << diff << ", " << nStreams << "\n" ;
+}
+
+int main(int argc, char const *argv[]) {
+#ifdef CRAYPAT
+    PAT_record(PAT_STATE_OFF);
+#endif
+    if (argc != 11) {
+        std::cerr << "Usage: " << argv[0] << " -nx <x> -ny <y> -nz <z> -iter <iterations> -streams <numStreams>" << std::endl;
+        return 1;
+    }
+    
+    int x = atoi(argv[2]);
+    int y = atoi(argv[4]);
+    int z = atoi(argv[6]);
+    int iter = atoi(argv[8]);
+    int numStreams = atoi(argv[10]); // Number of streams from command line
+    int nHalo = 3;
+    
+    assert(x > 0 && y > 0 && z > 0 && iter > 0);
+    
+    Storage3D<double> input(x, y, z, nHalo);
+    input.initialize();
+    Storage3D<double> output(x, y, z, nHalo);
+    output.initialize();
+
+    double alpha = 1. / 32.;
+
+    // Write initial field
+    std::ofstream fout;
+    fout.open("in_field_streams.dat", std::ios::binary | std::ofstream::trunc);
+    input.writeFile(fout);
+    fout.close();
+
+#ifdef CRAYPAT
+    PAT_record(PAT_STATE_ON);
+#endif
+    auto start = std::chrono::steady_clock::now();
+
+    apply_diffusion_gpu_streams_advanced(input, output, alpha, iter, x, y, z, nHalo, numStreams);
+
+    auto end = std::chrono::steady_clock::now();
+#ifdef CRAYPAT
+    PAT_record(PAT_STATE_OFF);
+#endif
+
+    updateHalo(output);
+    fout.open("out_field_streams.dat", std::ios::binary | std::ofstream::trunc);
+    output.writeFile(fout);
+    fout.close();
+
+    auto diff = end - start;
+    double timeDiff = std::chrono::duration<double, std::milli>(diff).count() / 1000.;
+    reportTime(output, iter, timeDiff, numStreams);
+
+    return 0;
 }
