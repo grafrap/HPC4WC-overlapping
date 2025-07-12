@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --gres=gpu:1
-#SBATCH --time=04:00:00
+#SBATCH --time=24:00:00
 #SBATCH --exclusive
 
 # Create build directory if it doesn't exist
@@ -31,17 +31,17 @@ echo "ranks nx ny nz num_iter time num_streams" > $OUTPUT_FILE
 
 # Four-dimensional loop for comprehensive testing
 # Loop 1: Number of streams (2^0 to 2^9 = 1 to 512)
-for ((stream_exp=0; stream_exp<=9; stream_exp++)); do
+for ((stream_exp=0; stream_exp<=8; stream_exp++)); do
     streams=$((2**stream_exp))
     
     # Loop 2: Problem sizes (xy dimensions, powers of 2 from 2^3 to 2^15)
-    for ((xy_exp=3; xy_exp<=15; xy_exp++)); do
+    for ((xy_exp=3; xy_exp<=11; xy_exp++)); do
         XY_SIZE=$((2**xy_exp))
         
         # Loop 3: Z dimension (8 to 512, exponential steps)
-        for z_size in 8 16 32 64 128 256 512; do
+        for z_size in 8 16 32 64 128 256; do
             # Loop 4: Iteration counts (2^0 to 2^15 = 1 to 32768)
-            for ((iter_exp=0; iter_exp<=15; iter_exp++)); do
+            for ((iter_exp=5; iter_exp<=12; iter_exp++)); do
                 iter=$((2**iter_exp))
                 
                 # Run the test and append results
