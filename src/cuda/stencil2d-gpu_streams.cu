@@ -47,7 +47,6 @@ void apply_diffusion_gpu_streams(Storage3D<double> &inField, Storage3D<double> &
 
     // Calculate total halo points for 1D kernel
     int xInterior = x;
-    int yInterior = y;
     int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
     int totalHaloPoints = haloPointsPerZ * z;
     
@@ -148,7 +147,6 @@ void apply_diffusion_gpu_streams_advanced(Storage3D<double> &inField, Storage3D<
 
     // Calculate total halo points for 1D kernel
     int xInterior = x;
-    int yInterior = y;
     int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
     int totalHaloPoints = haloPointsPerZ * z;
     
@@ -236,38 +234,46 @@ int main(int argc, char const *argv[]) {
     assert(x > 0 && y > 0 && z > 0 && iter > 0);
     
     Storage3D<double> input(x, y, z, nHalo);
-    input.initialize();
+    // input.initialize();
     Storage3D<double> output(x, y, z, nHalo);
     output.initialize();
 
     double alpha = 1. / 32.;
 
     // Write initial field
-    std::ofstream fout;
-    fout.open("in_field_streams.dat", std::ios::binary | std::ofstream::trunc);
-    input.writeFile(fout);
-    fout.close();
+    // std::ofstream fout;
+    // fout.open("in_field_streams.dat", std::ios::binary | std::ofstream::trunc);
+    // input.writeFile(fout);
+    // fout.close();
 
 #ifdef CRAYPAT
     PAT_record(PAT_STATE_ON);
 #endif
-    auto start = std::chrono::steady_clock::now();
+    double totalTime = 0.0;
+    const int TOTAL_REPS = 10; // Number of repetitions for timing
 
-    apply_diffusion_gpu_streams_advanced(input, output, alpha, iter, x, y, z, nHalo, numStreams);
+    // warm up the GPU
+    input.initialize();
+    apply_diffusion_gpu_streams(input, output, alpha, iter, x, y, z, nHalo, numStreams);
 
-    auto end = std::chrono::steady_clock::now();
+    for (int rep = 0; rep < TOTAL_REPS; ++rep) {
+        input.initialize();
+        auto start = std::chrono::steady_clock::now();
+        apply_diffusion_gpu_streams(input, output, alpha, iter, x, y, z, nHalo, numStreams);
+        auto end = std::chrono::steady_clock::now();
+        totalTime += std::chrono::duration<double, std::milli>(end - start).count() / 1000.;
+    }
+    double avgTime = totalTime / TOTAL_REPS;
 #ifdef CRAYPAT
     PAT_record(PAT_STATE_OFF);
 #endif
 
-    updateHalo(output);
-    fout.open("out_field_streams.dat", std::ios::binary | std::ofstream::trunc);
-    output.writeFile(fout);
-    fout.close();
+    // updateHalo(output);
+    // fout.open("out_field_streams.dat", std::ios::binary | std::ofstream::trunc);
+    // output.writeFile(fout);
+    // fout.close();
 
-    auto diff = end - start;
-    double timeDiff = std::chrono::duration<double, std::milli>(diff).count() / 1000.;
-    reportTime(output, iter, timeDiff, numStreams);
+    reportTime(output, iter, avgTime, numStreams);
 
     return 0;
 }

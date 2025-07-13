@@ -76,6 +76,10 @@ enable_language(CUDA)
 set(CMAKE_CUDA_STANDARD 14)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
+# Add global compiler flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
+
 # Optional flag for laptop builds
 option(LAPTOP_BUILD "Disable sm_90 architecture for local/laptop builds" OFF)
 
