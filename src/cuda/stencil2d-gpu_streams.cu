@@ -100,113 +100,6 @@ void apply_diffusion_gpu_streams(Storage3D<double> &inField, Storage3D<double> &
 }
 
 
-// second version for the gpu streams
-void apply_diffusion_gpu_streams_advanced(Storage3D<double> &inField, Storage3D<double> &outField,
-                                         double alpha, unsigned numIter, int x, int y, int z,
-                                         int halo, int numStreams = 3) {
-    
-    // Allocate device memory
-    inField.allocateDevice();
-    outField.allocateDevice();
-    
-    Storage3D<double> tmp1Field(x, y, z, halo); 
-    tmp1Field.allocateDevice();
-    
-    // Create CUDA streams
-    std::vector<cudaStream_t> streams(numStreams);
-    for (int i = 0; i < numStreams; ++i) {
-        cudaStreamCreate(&streams[i]);
-    }
-    
-    // Allocate pinned host memory for better transfer performance
-    double* h_pinned_in;
-    double* h_pinned_out;
-    size_t totalSize = inField.size() * sizeof(double);
-    
-    cudaMallocHost(&h_pinned_in, totalSize);
-    cudaMallocHost(&h_pinned_out, totalSize);
-    
-    // Copy initial data to pinned memory
-    memcpy(h_pinned_in, inField.data(), totalSize);
-    
-    // Initial async copy to device
-    cudaMemcpyAsync(inField.deviceData(), h_pinned_in, totalSize, 
-                    cudaMemcpyHostToDevice, streams[0]);
-    
-    // Calculate work distribution
-    int zPerStream = (z + numStreams - 2) / (numStreams - 1); // Reserve one stream for transfers
-    
-    dim3 blockSize(16, 16);
-    dim3 gridSize((x + halo * 2 + blockSize.x - 1) / blockSize.x,
-                  (y + halo * 2 + blockSize.y - 1) / blockSize.y);
-    
-    dim3 haloBlockSize(16, 16, 1);
-    dim3 haloGridSize((inField.xSize() + haloBlockSize.x - 1) / haloBlockSize.x,
-                     (inField.ySize() + haloBlockSize.y - 1) / haloBlockSize.y,
-                     (z + haloBlockSize.z - 1) / haloBlockSize.z);
-
-    // Calculate total halo points for 1D kernel
-    int xInterior = x;
-    int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
-    int totalHaloPoints = haloPointsPerZ * z;
-    
-    // 1D thread configuration for halo update
-    int haloThreadsPerBlock = 256;  // Best joice by testing
-    int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
-    
-    for (unsigned iter = 0; iter < numIter; ++iter) {
-        // Wait for previous transfer to complete
-        cudaStreamSynchronize(streams[0]);
-        
-        // GPU halo update
-        updateHaloKernel<<<haloBlocks, haloThreadsPerBlock, 0, streams[1]>>>(
-            inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
-        );
-        
-        cudaStreamSynchronize(streams[1]);
-        
-        // Launch computation on multiple streams (excluding transfer stream)
-        for (int streamId = 1; streamId < numStreams; ++streamId) {
-            int startK = (streamId - 1) * zPerStream;
-            int endK = std::min(startK + zPerStream, z);
-            
-            for (int k = startK; k < endK; ++k) {
-                diffusionStepKernel<<<gridSize, blockSize, 0, streams[streamId]>>>(
-                    inField.deviceData(), outField.deviceData(), tmp1Field.deviceData(),
-                    inField.xSize(), inField.ySize(), inField.zMax(), k, halo, alpha
-                );
-            }
-        }
-        
-        // Synchronize computation streams
-        for (int i = 1; i < numStreams; ++i) {
-            cudaStreamSynchronize(streams[i]);
-        }
-        
-        // Prepare for next iteration or final result
-        if (iter < numIter - 1) {
-            // Async copy output to input for next iteration
-            cudaMemcpyAsync(inField.deviceData(), outField.deviceData(), 
-                           totalSize, cudaMemcpyDeviceToDevice, streams[0]);
-        } else {
-            // Final async copy to host
-            cudaMemcpyAsync(h_pinned_out, outField.deviceData(), totalSize, 
-                           cudaMemcpyDeviceToHost, streams[0]);
-        }
-    }
-    
-    // Wait for final transfer and copy to output
-    cudaStreamSynchronize(streams[0]);
-    memcpy(outField.data(), h_pinned_out, totalSize);
-    
-    // Cleanup
-    for (int i = 0; i < numStreams; ++i) {
-        cudaStreamDestroy(streams[i]);
-    }
-    cudaFreeHost(h_pinned_in);
-    cudaFreeHost(h_pinned_out);
-}
-
 void reportTime(const Storage3D<double> &storage, int nIter, double diff, int nStreams = 1) {
     // std::cout << "ranks nx ny nz num_iter time num_streams\n";
     int size = 1; // Assuming single GPU
@@ -219,8 +112,8 @@ int main(int argc, char const *argv[]) {
 #ifdef CRAYPAT
     PAT_record(PAT_STATE_OFF);
 #endif
-    if (argc != 11) {
-        std::cerr << "Usage: " << argv[0] << " -nx <x> -ny <y> -nz <z> -iter <iterations> -streams <numStreams>" << std::endl;
+    if (argc < 11) {
+        std::cerr << "Usage: " << argv[0] << " -nx <x> -ny <y> -nz <z> -iter <iterations> -streams <numStreams> -test <true|false>" << std::endl;
         return 1;
     }
     
@@ -229,6 +122,10 @@ int main(int argc, char const *argv[]) {
     int z = atoi(argv[6]);
     int iter = atoi(argv[8]);
     int numStreams = atoi(argv[10]); // Number of streams from command line
+    bool test = false;
+    if (argc == 13) {
+        test = (std::string(argv[12]) == "true");
+    }
     int nHalo = 3;
     
     assert(x > 0 && y > 0 && z > 0 && iter > 0);
@@ -241,21 +138,20 @@ int main(int argc, char const *argv[]) {
     double alpha = 1. / 32.;
 
     // Write initial field
-    // std::ofstream fout;
     // fout.open("in_field_streams.dat", std::ios::binary | std::ofstream::trunc);
     // input.writeFile(fout);
     // fout.close();
-
-#ifdef CRAYPAT
+    
+    #ifdef CRAYPAT
     PAT_record(PAT_STATE_ON);
-#endif
+    #endif
     double totalTime = 0.0;
-    const int TOTAL_REPS = 10; // Number of repetitions for timing
-
+    const int TOTAL_REPS = test ? 1 : 10; // Number of repetitions for timing
+    
     // warm up the GPU
     input.initialize();
     apply_diffusion_gpu_streams(input, output, alpha, iter, x, y, z, nHalo, numStreams);
-
+    
     for (int rep = 0; rep < TOTAL_REPS; ++rep) {
         input.initialize();
         auto start = std::chrono::steady_clock::now();
@@ -264,14 +160,16 @@ int main(int argc, char const *argv[]) {
         totalTime += std::chrono::duration<double, std::milli>(end - start).count() / 1000.;
     }
     double avgTime = totalTime / TOTAL_REPS;
-#ifdef CRAYPAT
+    #ifdef CRAYPAT
     PAT_record(PAT_STATE_OFF);
-#endif
-
-    // updateHalo(output);
-    // fout.open("out_field_streams.dat", std::ios::binary | std::ofstream::trunc);
-    // output.writeFile(fout);
-    // fout.close();
+    #endif
+    if(test) {
+        updateHalo(output);
+        std::ofstream fout;
+        fout.open("out_field_streams.dat", std::ios::binary | std::ofstream::trunc);
+        output.writeFile(fout);
+        fout.close();
+    }
 
     reportTime(output, iter, avgTime, numStreams);
 

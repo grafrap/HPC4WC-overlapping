@@ -2,27 +2,35 @@
 
 #include <ostream>
 #include <vector>
+#ifdef __CUDACC__
 #include <cuda_runtime.h>
+#endif
 
 template <typename T> class Storage3D {
 public:
   Storage3D(int x, int y, int z, int nhalo, T value = 0)
       : xsize_(x + 2 * nhalo), ysize_(y + 2 * nhalo), zsize_(z),
         halosize_(nhalo),
-        data_((x + 2 * nhalo) * (y + 2 * nhalo) * (z + 2 * nhalo), value),
-        d_data_(nullptr) {}
+        data_((x + 2 * nhalo) * (y + 2 * nhalo) * (z + 2 * nhalo), value)
+#ifdef __CUDACC__
+  , d_data_(nullptr)
+#endif
+  {}
 
   // Destructor to free device memory
   ~Storage3D() {
+#ifdef __CUDACC__
     if (d_data_) {
       cudaFree(d_data_);
     }
+#endif
   }
 
   T &operator()(int i, int j, int k) {
     return data_[i + j * xsize_ + k * xsize_ * ysize_];
   }
 
+#ifdef __CUDACC__
   // GPU memory allocation
   void allocateDevice() {
     size_t total_size = xsize_ * ysize_ * zsize_ * sizeof(T);
@@ -47,6 +55,7 @@ public:
 
   // Get device pointer
   T* deviceData() { return d_data_; }
+#endif
   
   // Get host pointer
   T* data() { return data_.data(); }
@@ -102,7 +111,9 @@ public:
 private:
   int32_t xsize_, ysize_, zsize_, halosize_;
   std::vector<T> data_;
+#ifdef __CUDACC__
   T* d_data_;  // Device pointer
+#endif
 };
 
 void updateHalo(Storage3D<double> &inField) {
