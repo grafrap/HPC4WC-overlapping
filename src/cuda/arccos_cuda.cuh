@@ -20,8 +20,6 @@
 // Define the floating-point type
 using fType = float;
 
-// CUDA kernel that computes the arccos of the element at the threads index
-__global__ void compute_kernel_once(fType* d_data, int size);
 
 // CUDA kernel that computes the arccos(arccos) of the element at the threads index
 __global__ void compute_kernel_multiple(fType* d_data, int size, int num_arcos_calls);
