@@ -26,9 +26,26 @@ make clean
 make
 
 
+# Create a timestamp for output file if not running via SLURM
+if [ -z "$SLURM_JOB_ID" ]; then
+    JOB_ID=$(date +%Y%m%d_%H%M%S)
+    OUTPUT_FILE="../measurements/perf_test_cuda_${JOB_ID}.out"
+    ERROR_FILE="../measurements/perf_test_cuda_${JOB_ID}.err"
+    WARMUPOUT_FILE="../measurements/warmup_cuda_${JOB_ID}.out"
+    WARMUPERR_FILE="../measurements/warmup_cuda_${JOB_ID}.err"
+    # Ensure measurements directory exists
+    mkdir -p ../measurements
+else
+    # When running via srun or sbatch, use absolute path from project root
+    OUTPUT_FILE="../measurements/perf_test_cuda_$SLURM_JOB_ID.out"
+    ERROR_FILE="../measurements/perf_test_cuda_$SLURM_JOB_ID.err"
+    WARMUPOUT_FILE="../measurements/warmup_cuda_$SLURM_JOB_ID.out"
+    WARMUPERR_FILE="../measurements/warmup_cuda_$SLURM_JOB_ID.err"
+    # Ensure measurements directory exists
+    mkdir -p ../measurements
+fi
+
 # warm up run with verification
-WARMUPOUT_FILE="../measurements/warmup_cuda_${JOB_ID}.out"
-WARMUPERR_FILE="../measurements/warmup_cuda_${JOB_ID}.err"
 ./cuda_arccos 1 1024 4 10 1 >> $WARMUPOUT_FILE 2>> $WARMUPERR_FILE
 
 # Check for errors in the warmup run
@@ -37,22 +54,6 @@ if grep -q "There were errors in the results or there was a runtime error." "$WA
     exit 1
 else
     echo "Warm-up run completed successfully."
-fi
-
-
-# Create a timestamp for output file if not running via SLURM
-if [ -z "$SLURM_JOB_ID" ]; then
-    JOB_ID=$(date +%Y%m%d_%H%M%S)
-    OUTPUT_FILE="../measurements/perf_test_cuda_${JOB_ID}.out"
-    ERROR_FILE="../measurements/perf_test_cuda_${JOB_ID}.err"
-    # Ensure measurements directory exists
-    mkdir -p ../measurements
-else
-    # When running via srun or sbatch, use absolute path from project root
-    OUTPUT_FILE="../measurements/perf_test_cuda_$SLURM_JOB_ID.out"
-    ERROR_FILE="../measurements/perf_test_cuda_$SLURM_JOB_ID.err"
-    # Ensure measurements directory exists
-    mkdir -p ../measurements
 fi
 
 echo "Saving results to: $OUTPUT_FILE"
@@ -67,10 +68,9 @@ do
         for ((i=0; i<10; i+= 1))
             do
                 SIZE=$((2**k))
-                # echo "Testing array size: $SIZE with $((2**i)) streams and $REPS repetitions" | tee -a $OUTPUT_FILE
-                ./cuda_arccos $REPS $SIZE $((2**i)) 10 0 >> $OUTPUT_FILE 2>> $ERROR_FILE
 
-                # ./cuda_arccos $SIZE 4 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
+                ./cuda_arccos $REPS $SIZE $((2**i)) 10 0 >> $OUTPUT_FILE 2>> $ERROR_FILE
+                
             done
         done
 done
