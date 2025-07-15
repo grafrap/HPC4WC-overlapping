@@ -102,7 +102,7 @@ int init_data(fType* h_data[], fType* h_result[], fType* h_reference[], fType* d
     return 0; // Return 0 on success
 }
 
-void init_h_local(fType* h_data, fType* h_result, int i, int num_arccos_calls, int chunksize, std::mt19937 &gen, std::uniform_real_distribution<fType> &dis) {
+void init_h_local(fType* h_data, fType* h_result, int num_arccos_calls, int chunksize, std::mt19937 &gen, std::uniform_real_distribution<fType> &dis) {
     
     // Initialize data with random values in the range [-1, 1]
     for (int j = 0; j < chunksize; ++j) {
