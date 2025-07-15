@@ -2,8 +2,6 @@
 #include <chrono>
 #include <random>
 
-#include "cnpy.h"
-
 // Number of threads used per block on GPU
 #define THREADS_PER_BLOCK 256
 

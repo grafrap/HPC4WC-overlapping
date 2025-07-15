@@ -21,7 +21,7 @@ export PATH=${CUDA_ROOT}/bin:$PATH
 export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 
 # Use system cmake and set CUDA toolkit root
-/usr/bin/cmake -DCUDAToolkit_ROOT=${CUDA_ROOT} ..
+/usr/bin/cmake -DCUDAToolkit_ROOT=${CUDA_ROOT} -DCMAKE_CUDA_COMPILER=${CUDA_ROOT}/bin/nvcc ..
 make clean
 make
 

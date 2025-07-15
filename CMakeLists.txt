@@ -59,3 +59,20 @@ set(STENCIL_BASE_SOURCES
 
 add_executable(stencil2d_cpu ${STENCIL_BASE_SOURCES})
 target_include_directories(stencil2d_cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cuda)
+
+# Directories with Python/runtime scripts
+set(CONTAINS_PYTHON
+    ${PROJECT_SOURCE_DIR}/src/gt4py
+    ${PROJECT_SOURCE_DIR}/src/reference
+    ${PROJECT_SOURCE_DIR}/tests
+)
+
+# Create symlinks for Python/runtime folders in build directory
+foreach(INPUT_DIR ${CONTAINS_PYTHON})
+    get_filename_component(DIR_NAME ${INPUT_DIR} NAME)
+    add_custom_command(TARGET cuda_arccos POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            ${INPUT_DIR} $<TARGET_FILE_DIR:cuda_arccos>/${DIR_NAME}
+        COMMENT "Creating symlink to ${DIR_NAME} in build directory"
+    )
+endforeach()
