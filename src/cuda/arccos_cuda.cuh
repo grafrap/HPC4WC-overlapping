@@ -11,7 +11,7 @@
 #define SEED 42
 
 // Define a tolerance for floating-point comparison
-#define TOL 1e-1
+#define TOL 1e-5
 
 // Debug flag (varification function)
 #define DEBUG 0
