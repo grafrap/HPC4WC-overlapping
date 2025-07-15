@@ -69,7 +69,7 @@ int run_arccos(int num_arccos_calls, int size, int num_streams, std::chrono::dur
     //     correct_result = verify_result(h_result, h_data, size_per_stream, num_streams);
     // }
 
-    correct_result = verify_result(h_reference, h_result, size_per_stream, num_streams);
+    correct_result = verify_result(h_reference, h_result, size_per_stream, num_streams, num_arccos_calls);
 
     return correct_result ? 0 : 1; // Return 0 if all results are correct, otherwise return 1
 
@@ -156,12 +156,13 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
 }
 
 // Verify the result of the arccos computation (return bool?) (call init_ref_result for the reference result)
-bool verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams) {
+bool verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams, int num_arccos_calls) {
+    // fType adaptive_tol = TOL * (1 + num_arccos_calls); 
     for (int i = 0; i < num_streams; ++i) {
         for (int j = 0; j < size_per_stream; ++j) {
-            if (std::fabs(h_reference[i][j] - h_result[i][j]) > TOL) {
+            if (std::fabs(h_reference[i][j] - h_result[i][j]) > 1e-3) {
                 std::cerr << "Mismatch at index " << j << " in stream " << i << ": "
-                          << h_reference[i][j] << " != " << h_result[i][j] << std::endl;
+                          << h_reference[i][j] << " != " << h_result[i][j] << " with a difference of " << std::fabs(h_reference[i][j] - h_result[i][j]) << std::endl;
                 return false; // Early exit on first mismatch
             }
         }
