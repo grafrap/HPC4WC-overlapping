@@ -17,7 +17,7 @@ export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 export NSYS_ROOT=/opt/nvidia/hpc_sdk/Linux_aarch64/24.3/profilers/Nsight_Systems
 export PATH=${NSYS_ROOT}/bin:$PATH
 
-cd build2
+cd build
 mkdir -p ../measurements/profiles
 
 # Check current working directory and create absolute path
