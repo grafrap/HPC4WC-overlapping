@@ -52,37 +52,3 @@ done
 
 echo "Final check of profile directory:"
 ls -la "$PROFILE_DIR"
-
-# #!/bin/bash
-# #SBATCH --job-name=stencil_stream_profile
-# #SBATCH --output=measurements/stream_profile_%j.out
-# #SBATCH --error=measurements/stream_profile_%j.err
-# #SBATCH --ntasks=1
-# #SBATCH --cpus-per-task=72
-# #SBATCH --gres=gpu:1
-# #SBATCH --time=01:00:00
-
-
-# # Set up CUDA environment
-# export CUDA_ROOT=/opt/nvidia/hpc_sdk/Linux_aarch64/24.3/cuda/12.3
-# export PATH=${CUDA_ROOT}/bin:$PATH
-# export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
-
-# # Add Nsight Systems to PATH
-# export NSYS_ROOT=/opt/nvidia/hpc_sdk/Linux_aarch64/24.3/profilers/Nsight_Systems
-# export PATH=${NSYS_ROOT}/bin:$PATH
-
-# cd build
-# mkdir -p ../measurements/profiles
-
-# # Profile different stream counts to see distribution
-# for streams in 1 2 4 8 16 32; do
-#     echo "Profiling with $streams streams..."
-#     nsys profile \
-#         --output=../measurements/profiles/streams_${streams}.qdrep \
-#         --force-overwrite=true \
-#         --trace=cuda,nvtx \
-#         --cuda-memory-usage=true \
-#         --capture-range=cudaProfilerApi \
-#         ./stencil2d_gpu_streams -nx 128 -ny 128 -nz 2048 -iter 256 -streams $streams
-# done
