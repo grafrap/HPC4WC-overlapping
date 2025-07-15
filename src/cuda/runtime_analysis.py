@@ -34,7 +34,6 @@ def extract_data(filename):
                         print(f"Skipping line (parsing error): {line}")
                     colnames = ["Calls", "Size", "NUM_STREAMS", "Time"]
     return pd.DataFrame(data, columns=colnames)
-
     
 
 
