@@ -10,11 +10,13 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    long num_arccos_calls = std::atoi(argv[1]);
-    long size = std::atoi(argv[2]);
-    long num_streams = std::atoi(argv[3]);
-    long num_repetitions = std::atoi(argv[4]);
+    // Parse command line arguments
+    int num_arccos_calls = std::atoi(argv[1]);
+    int size = std::atoi(argv[2]);
+    int num_streams = std::atoi(argv[3]);
+    int num_repetitions = std::atoi(argv[4]);
 
+    // Validate command line arguments
     if (size <= 0 || num_streams <= 0 || num_repetitions <= 0) {
         std::cerr << "Size, number of streams and number of repetitions must be positive integers." << std::endl;
         return 1;
@@ -25,7 +27,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Initialize data and result arrays and streams
+    // Declare data and result arrays and streams
     int size_per_stream = size / num_streams;
     
     size_t bytes = size_per_stream * sizeof(fType);
@@ -40,17 +42,17 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // Run the arccos computation multiple times and measure the duration
     std::chrono::duration<double> avg_duration(0.0);
     int success = 0;
-    // Run the arccos computation
     for (int i = 0; i < num_repetitions; ++i) {
         // std::cerr << "Repetition " << (i + 1) << " of " << num_repetitions << std::endl;
         std::chrono::duration<double> duration;
       
         success = run_arccos(num_arccos_calls, size_per_stream, num_streams, duration, h_data, h_result, h_reference, d_data, streams);
+        
         // Check the result
         if (success == 0) {
-            // std::cerr << "All results are correct." << std::endl;
             avg_duration += duration;
         } else {
             std::cerr << "There were errors in the results or there was a runtime error." << std::endl;
@@ -61,9 +63,8 @@ int main(int argc, char** argv) {
     // Cleanup all allocated memory and destroy all streams
     cleanup(h_data, h_result, h_reference, d_data, streams, num_streams);
 
-    // Print the duration of the computation
+    // Compute the average duration
     avg_duration /= num_repetitions;
-    // std::cerr << "Average duration: " << avg_duration.count() << " seconds." << std::endl;
 
     // Clean output in out stream
     if (success == 0) {
