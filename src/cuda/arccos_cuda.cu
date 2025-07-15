@@ -16,7 +16,7 @@ __global__ void compute_kernel_multiple(fType* d_data, int size, int num_arcos_c
 }
  
 
-int run_arccos(int num_arccos_calls, int size_per_stream, int num_streams, std::chrono::duration<double> &duration, fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], cudaStream_t streams[]) {
+int run_arccos(int num_arccos_calls, int size_per_stream, int num_streams, std::chrono::duration<double> &duration, fType* h_data[], fType* h_result[], fType* d_data[], cudaStream_t streams[]) {
 
     // Make sure there are enough blocks to cover the data
     int threads = THREADS_PER_BLOCK;
@@ -35,12 +35,7 @@ int run_arccos(int num_arccos_calls, int size_per_stream, int num_streams, std::
         return 1;
     }
 
-    // Verify result
-    bool correct_result;
-    correct_result = verify_result(h_reference, h_result, size_per_stream, num_streams);
-
-    // Return 0 if all results are correct, otherwise return 1
-    return correct_result ? 0 : 1;
+    return 0;
 
 }
 
@@ -150,7 +145,7 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
 }
 
 
-bool verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams) {
+int verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams) {
     
     // Check if the results match the reference values
     for (int i = 0; i < num_streams; ++i) {
@@ -159,12 +154,12 @@ bool verify_result(fType* h_reference[], fType* h_result[], int size_per_stream,
                 std::cerr << "Mismatch at index " << j << " in stream " << i << ": "
                           << h_reference[i][j] << " != " << h_result[i][j] << " with a difference of " << std::fabs(h_reference[i][j] - h_result[i][j]) << std::endl;
                 // Early exit on first mismatch
-                return false;
+                return 1;
             }
         }
     }
     // All streams verified successfully
-    return true;
+    return 0;
 }
 
 

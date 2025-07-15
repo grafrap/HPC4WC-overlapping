@@ -53,15 +53,15 @@ void init_h_local(fType* h_data, fType* h_result, int num_arccos_calls, int chun
 
 
 // Run the arccos computation using multiple CUDA streams
-// PRE: h_data, h_result, h_reference and h_data point to arrays of size "num_streams" of valid memory of size "size_per_stream".
+// PRE: h_data, h_result and h_data point to arrays of size "num_streams" of valid memory of size "size_per_stream".
 //      h_data and h_result must be pinned memory.
 //      d_data points to an array of size "num_streams" of valid device memory of size "size_per_stream".
 //      streams points to an array of size "num_streams" of valid CUDA streams.
 //      duration is a valid duration object to store the time taken for the computation.
 // POST: h_result contains the result of the arccos computation.
 //       duration contains the time it took to perform the arrccos computations on the whole array, distributed to the streams.
-//       Returns 0 if all results are correct and no error occured, otherwise returns 1.
-int run_arccos(int num_arccos_calls, int size_per_stream, int num_streams, std::chrono::duration<double> &duration, fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], cudaStream_t streams[]);
+//       Returns 0 if no error occured, otherwise returns 1.
+int run_arccos(int num_arccos_calls, int size_per_stream, int num_streams, std::chrono::duration<double> &duration, fType* h_data[], fType* h_result[], fType* d_data[], cudaStream_t streams[]);
 
 
 // Run stream operations
@@ -76,12 +76,8 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
 
 // Verify the result of the arccos computation
 // PRE: h_reference and h_result point to arrays of size "num_streams" of valid memory of size "size_per_stream".
-// POST: Returns true if all results are correct, otherwise returns false.
-bool verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams);
-
-
-// Debug version with additional argument
-bool verify_result_debug(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams, fType* h_data_debug[]);
+// POST: Returns 0 if all results are correct, otherwise returns 1.
+int verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams);
 
 
 // Delete all allocated memory and destroy all streams

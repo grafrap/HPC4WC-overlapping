@@ -5,8 +5,8 @@
 int main(int argc, char** argv) {
 
     // Check command line arguments
-    if (argc != 5) {
-        std::cerr << "Usage: " << argv[0] << "<num_arccos_calls> <size> <num_streams> <num_repetitions>" << std::endl;
+    if (argc != 6) {
+        std::cerr << "Usage: " << argv[0] << "<num_arccos_calls> <size> <num_streams> <num_repetitions> <verification_period>" << std::endl;
         return 1;
     }
 
@@ -15,10 +15,16 @@ int main(int argc, char** argv) {
     int size = std::atoi(argv[2]);
     int num_streams = std::atoi(argv[3]);
     int num_repetitions = std::atoi(argv[4]);
+    int verification_period = std::atoi(argv[5]);
 
     // Validate command line arguments
     if (size <= 0 || num_streams <= 0 || num_repetitions <= 0) {
         std::cerr << "Size, number of streams and number of repetitions must be positive integers." << std::endl;
+        return 1;
+    }
+
+    if (verification_period < 0 || verification_period > num_repetitions) {
+        std::cerr << "Verification period must be between 0 and the number of repetitions." << std::endl;
         return 1;
     }
 
@@ -46,11 +52,16 @@ int main(int argc, char** argv) {
     std::chrono::duration<double> avg_duration(0.0);
     int success = 0;
     for (int i = 0; i < num_repetitions; ++i) {
-        // std::cerr << "Repetition " << (i + 1) << " of " << num_repetitions << std::endl;
-        std::chrono::duration<double> duration;
-      
-        success = run_arccos(num_arccos_calls, size_per_stream, num_streams, duration, h_data, h_result, h_reference, d_data, streams);
         
+        // Run the arccos computation
+        std::chrono::duration<double> duration;
+        success = run_arccos(num_arccos_calls, size_per_stream, num_streams, duration, h_data, h_result, d_data, streams);
+
+        // If verification period is set, verify results every verification_period repetitions
+        if (success == 0 && verification_period > 0 && i % verification_period == 0) {
+            success = verify_result(h_reference, h_result, size_per_stream, num_streams);
+        }
+
         // Check the result
         if (success == 0) {
             avg_duration += duration;
