@@ -21,7 +21,7 @@ __global__ void compute_kernel_multiple(fType* d_data, int size, int num_arcos_c
 }
  
 
-int run_arccos(int num_arccos_calls, int size, int num_streams, std::chrono::duration<double> &duration, fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], cudaStream_t streams[]) {
+int run_arccos(int num_arccos_calls, int size_per_stream, int num_streams, std::chrono::duration<double> &duration, fType* h_data[], fType* h_result[], fType* h_reference[], fType* d_data[], cudaStream_t streams[]) {
 
     // DEBUG: Copy h_data 
     // fType* h_data_debug[num_streams] = {nullptr};
@@ -36,7 +36,6 @@ int run_arccos(int num_arccos_calls, int size, int num_streams, std::chrono::dur
 
     // total number of threads = blocks * threaads = size per stream 
     int threads = THREADS_PER_BLOCK;
-    int size_per_stream = size / num_streams;
     int blocks = (size_per_stream + threads - 1) / threads;
 
     // Launch operations in streams
@@ -97,7 +96,7 @@ int init_data(fType* h_data[], fType* h_result[], fType* h_reference[], fType* d
         cudaStreamCreate(&streams[i]);
 
         // Initialize host data and reference data
-        init_h_local(h_data[i], h_reference[i], i, num_arccos_calls, size_per_stream, gen, dis);
+        init_h_local(h_data[i], h_reference[i], num_arccos_calls, size_per_stream, gen, dis);
     }
     return 0; // Return 0 on success
 }
