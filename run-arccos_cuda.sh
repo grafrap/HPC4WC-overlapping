@@ -65,7 +65,7 @@ do
     REPS=$((2**rep))
     for ((k=3; k<30; k+= 2))
         do
-        for ((i=0; i<10; i+= 1))
+        for ((i=0; i<10 && i<k; i+= 1))
             do
                 SIZE=$((2**k))
 
