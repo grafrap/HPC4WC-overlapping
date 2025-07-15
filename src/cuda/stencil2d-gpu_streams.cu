@@ -1,0 +1,177 @@
+#include <cassert>
+#include <chrono>
+#include <fstream>
+#include <iostream>
+#include <cuda_runtime.h>
+
+#ifdef CRAYPAT
+#include "pat_api.h"
+#endif
+#include "stencil2d_helper/utils.h"
+#include "stencil2d_helper/stencil_kernels.cuh"
+
+void apply_diffusion_gpu_streams(Storage3D<double> &inField, Storage3D<double> &outField,
+                               double alpha, unsigned numIter, int x, int y, int z,
+                               int halo, int numStreams = 2) {
+    
+    // Allocate device memory
+    inField.allocateDevice();
+    outField.allocateDevice();
+    
+    // Create temporary field for GPU computation
+    Storage3D<double> tmp1Field(x, y, z, halo); 
+    tmp1Field.allocateDevice();
+    
+    // Create CUDA streams
+    std::vector<cudaStream_t> streams(numStreams);
+    for (int i = 0; i < numStreams; ++i) {
+        cudaStreamCreate(&streams[i]);
+    }
+    
+    // Copy input data to device (initial setup)
+    inField.copyToDevice();
+    
+    // Calculate work distribution per stream
+    int zPerStream = (z + numStreams - 1) / numStreams;
+    
+    // Set up CUDA execution configuration
+    dim3 blockSize(16, 16);
+    dim3 gridSize((x + halo * 2 + blockSize.x - 1) / blockSize.x,
+                  (y + halo * 2 + blockSize.y - 1) / blockSize.y);
+    
+    // Halo update configuration (can be done on stream 0)
+    dim3 haloBlockSize(16, 16, 1);
+    dim3 haloGridSize((inField.xSize() + haloBlockSize.x - 1) / haloBlockSize.x,
+                     (inField.ySize() + haloBlockSize.y - 1) / haloBlockSize.y,
+                     (z + haloBlockSize.z - 1) / haloBlockSize.z);
+
+    // Calculate total halo points for 1D kernel
+    int xInterior = x;
+    int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
+    int totalHaloPoints = haloPointsPerZ * z;
+    
+    // 1D thread configuration for halo update
+    int haloThreadsPerBlock = 256;  // Best choice by testing
+    int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
+    
+    for (unsigned iter = 0; iter < numIter; ++iter) {
+        // GPU halo update on first stream
+        updateHaloKernel<<<haloBlocks, haloThreadsPerBlock, 0, streams[0]>>>(
+            inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
+        );
+        
+        // Wait for halo update to complete before starting computation
+        cudaStreamSynchronize(streams[0]);
+        
+        // Launch diffusion kernels on multiple streams
+        for (int streamId = 0; streamId < numStreams; ++streamId) {
+            int startK = streamId * zPerStream;
+            int endK = std::min(startK + zPerStream, z);
+            
+            for (int k = startK; k < endK; ++k) {
+                diffusionStepKernel<<<gridSize, blockSize, 0, streams[streamId]>>>(
+                    inField.deviceData(), outField.deviceData(), tmp1Field.deviceData(),
+                    inField.xSize(), inField.ySize(), inField.zMax(), k, halo, alpha
+                );
+            }
+        }
+        
+        // Synchronize all streams before next iteration
+        for (int i = 0; i < numStreams; ++i) {
+            cudaStreamSynchronize(streams[i]);
+        }
+        
+        // If not the last iteration, copy output back to input
+        if (iter < numIter - 1) {
+            cudaMemcpyAsync(inField.deviceData(), outField.deviceData(), 
+                           inField.size() * sizeof(double), cudaMemcpyDeviceToDevice, 
+                           streams[0]);
+            cudaStreamSynchronize(streams[0]);
+        }
+    }
+    
+    // Cleanup streams
+    for (int i = 0; i < numStreams; ++i) {
+        cudaStreamDestroy(streams[i]);
+    }
+    
+    // Copy final result back to host
+    outField.copyFromDevice();
+}
+
+
+void reportTime(const Storage3D<double> &storage, int nIter, double diff, int nStreams = 1) {
+    // std::cout << "ranks nx ny nz num_iter time num_streams\n";
+    int size = 1; // Assuming single GPU
+    std::cout << "###" << size << ", " << storage.xMax() - storage.xMin() << ", "
+              << storage.yMax() - storage.yMin() << ", " << storage.zMax() << ", "
+              << nIter << ", " << diff << ", " << nStreams << "\n" ;
+}
+
+int main(int argc, char const *argv[]) {
+#ifdef CRAYPAT
+    PAT_record(PAT_STATE_OFF);
+#endif
+    if (argc < 11) {
+        std::cerr << "Usage: " << argv[0] << " -nx <x> -ny <y> -nz <z> -iter <iterations> -streams <numStreams> -test <true|false>" << std::endl;
+        return 1;
+    }
+    
+    int x = atoi(argv[2]);
+    int y = atoi(argv[4]);
+    int z = atoi(argv[6]);
+    int iter = atoi(argv[8]);
+    int numStreams = atoi(argv[10]); // Number of streams from command line
+    bool test = false;
+    if (argc == 13) {
+        test = (std::string(argv[12]) == "true");
+    }
+    int nHalo = 3;
+    
+    assert(x > 0 && y > 0 && z > 0 && iter > 0);
+    
+    Storage3D<double> input(x, y, z, nHalo);
+    // input.initialize();
+    Storage3D<double> output(x, y, z, nHalo);
+    output.initialize();
+
+    double alpha = 1. / 32.;
+
+    // Write initial field
+    // fout.open("in_field_streams.dat", std::ios::binary | std::ofstream::trunc);
+    // input.writeFile(fout);
+    // fout.close();
+    
+    #ifdef CRAYPAT
+    PAT_record(PAT_STATE_ON);
+    #endif
+    double totalTime = 0.0;
+    const int TOTAL_REPS = test ? 1 : 10; // Number of repetitions for timing
+    
+    // warm up the GPU
+    input.initialize();
+    apply_diffusion_gpu_streams(input, output, alpha, iter, x, y, z, nHalo, numStreams);
+    
+    for (int rep = 0; rep < TOTAL_REPS; ++rep) {
+        input.initialize();
+        auto start = std::chrono::steady_clock::now();
+        apply_diffusion_gpu_streams(input, output, alpha, iter, x, y, z, nHalo, numStreams);
+        auto end = std::chrono::steady_clock::now();
+        totalTime += std::chrono::duration<double, std::milli>(end - start).count() / 1000.;
+    }
+    double avgTime = totalTime / TOTAL_REPS;
+    #ifdef CRAYPAT
+    PAT_record(PAT_STATE_OFF);
+    #endif
+    if(test) {
+        updateHalo(output);
+        std::ofstream fout;
+        fout.open("out_field_streams.dat", std::ios::binary | std::ofstream::trunc);
+        output.writeFile(fout);
+        fout.close();
+    }
+
+    reportTime(output, iter, avgTime, numStreams);
+
+    return 0;
+}

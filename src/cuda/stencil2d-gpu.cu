@@ -40,16 +40,26 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
     std::cout << "Grid size: " << gridSize.x << "x" << gridSize.y << std::endl;
     std::cout << "Block size: " << blockSize.x << "x" << blockSize.y << std::endl;
     dim3 haloBlockSize(16, 16, 1);
-    dim3 haloGridSize((x + haloBlockSize.x - 1) / haloBlockSize.x,
-                     (y + haloBlockSize.y - 1) / haloBlockSize.y,
+    dim3 haloGridSize((inField.xSize() + haloBlockSize.x - 1) / haloBlockSize.x,
+                     (inField.ySize() + haloBlockSize.y - 1) / haloBlockSize.y,
                      (z + haloBlockSize.z - 1) / haloBlockSize.z);
+        // Calculate total halo points for 1D kernel
+    int xInterior = x;
+    int yInterior = y;
+    int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
+    int totalHaloPoints = haloPointsPerZ * z;
+    
+    // 1D thread configuration for halo update
+    int haloThreadsPerBlock = 256;  // Best joice by testing
+    int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
+    
     
     for (unsigned iter = 0; iter < numIter; ++iter) {
-        // GPU halo update - much faster than CPU version!
-        updateHaloKernel2D<<<haloGridSize, haloBlockSize>>>(
-            inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
+        // GPU halo update
+        updateHaloKernel<<<haloBlocks, haloThreadsPerBlock>>>(
+        inField.deviceData(), inField.xSize(), inField.ySize(), inField.zMax(), halo
         );
-        
+                
         cudaDeviceSynchronize(); // Ensure halo update completes
         
         for (int k = 0; k < z; ++k) {
@@ -58,6 +68,8 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
                 inField.xSize(), inField.ySize(), inField.zMax(), k, halo, alpha
             );
         }
+
+        cudaDeviceSynchronize(); // Ensure diffusion step completes
         
         // If not the last iteration, copy output back to input
         if (iter < numIter - 1) {
@@ -71,12 +83,11 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
 }
 
 void reportTime(const Storage3D<double> &storage, int nIter, double diff) {
-    std::cout << "# ranks nx ny nz num_iter time\ndata = np.array( [ \\\n";
+    std::cout << "ranks nx ny nz num_iter time\n";
     int size = 1; // Assuming single GPU
-    std::cout << "[ " << size << ", " << storage.xMax() - storage.xMin() << ", "
+    std::cout << size << ", " << storage.xMax() - storage.xMin() << ", "
               << storage.yMax() - storage.yMin() << ", " << storage.zMax() << ", "
-              << nIter << ", " << diff << "],\n";
-    std::cout << "] )" << std::endl;
+              << nIter << ", " << diff << "\n";
 }
 
 int main(int argc, char const *argv[]) {
@@ -121,7 +132,22 @@ int main(int argc, char const *argv[]) {
     PAT_record(PAT_STATE_OFF);
 #endif
 
-    updateHalo(output);
+    // updateHalo(output);
+    int xInterior = x;
+    int yInterior = y;
+    int haloPointsPerZ = 2 * xInterior * nHalo + 2 * (y + 2 * nHalo) * nHalo;
+    int totalHaloPoints = haloPointsPerZ * z;
+    
+    // 1D thread configuration for halo update
+    int haloThreadsPerBlock = 256;  // Best choice by testing
+    int haloBlocks = (totalHaloPoints + haloThreadsPerBlock - 1) / haloThreadsPerBlock;
+    
+    // Update halo on output field
+    updateHaloKernel<<<haloBlocks, haloThreadsPerBlock>>>(
+        output.deviceData(), output.xSize(), output.ySize(), output.zMax(), nHalo
+    );
+    cudaDeviceSynchronize(); // Ensure halo update completes
+    output.copyFromDevice();
     fout.open("out_field.dat", std::ios::binary | std::ofstream::trunc);
     output.writeFile(fout);
     fout.close();
