@@ -27,7 +27,7 @@ make
 
 
 # warm up run
-./cuda_arccos 1 1024 4 10 > /dev/null
+./cuda_arccos 1 1024 4 10 1 > /dev/null
 
 # Create a timestamp for output file if not running via SLURM
 if [ -z "$SLURM_JOB_ID" ]; then
@@ -57,7 +57,7 @@ do
             do
                 SIZE=$((2**k))
                 # echo "Testing array size: $SIZE with $((2**i)) streams and $REPS repetitions" | tee -a $OUTPUT_FILE
-                ./cuda_arccos $REPS $SIZE $((2**i)) 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
+                ./cuda_arccos $REPS $SIZE $((2**i)) 10 0 >> $OUTPUT_FILE 2>> $ERROR_FILE
 
                 # ./cuda_arccos $SIZE 4 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
             done
