@@ -7,9 +7,7 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
-#include <cassert>
 
-#include "cnpy.h"
 #include "arccos_cuda.cuh"
 
 
