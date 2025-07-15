@@ -1,0 +1,237 @@
+# HPC4WC Overlapping Performance Analysis
+
+This project analyzes the performance benefits of using CUDA streams for overlapping computation and memory operations in high-performance computing applications. It includes implementations of diffusion stencil operations and arccos computations with varying levels of parallelization.
+
+## Project Structure
+
+```
+HPC4WC-overlapping/
+├── src/                    # Source code implementations
+│   ├── cuda/              # CUDA implementations
+│   │   ├── arccos_cuda.cu/.cuh      # Arccos kernel implementations
+│   │   ├── stencil2d-gpu.cu         # Single-stream GPU stencil
+│   │   ├── stencil2d-gpu_streams.cu # Multi-stream GPU stencil
+│   │   ├── main.cu                  # Main arccos test program
+│   │   ├── runtime_analysis.py      # Performance data analysis
+│   │   └── stencil2d_helper/        # Helper utilities and base implementations
+│   │       ├── stencil_kernels.cu/.cuh  # CUDA kernels for stencil operations
+│   │       ├── stencil2d-base.cpp       # CPU baseline implementation
+│   │       └── utils.h                  # Storage and utility classes
+│   ├── gt4py/             # GT4Py reference implementations
+│   └── reference/         # Reference implementations
+├── tests/                 # Test scripts and validation
+│   ├── test_stencil.sh   # Automated stencil testing script
+│   ├── comparison.py     # Output validation script
+│   └── build_tests/      # Test build directory
+├── measurements/          # Performance data and analysis
+│   ├── cuda_plots.ipynb  # Performance visualization notebooks
+│   ├── *.csv             # Raw performance data
+│   └── *.pdf             # Generated plots
+├── report/               # Project documentation and reports
+├── CMakeLists.txt        # Build configuration
+├── environment.yml       # Conda environment specification
+├── run_*.sh             # SLURM job scripts
+└── README.md            # This file
+```
+
+## Quick Start
+
+### 1. Environment Setup
+
+First, create and activate the required Python environment:
+
+```bash
+# Clone the repository
+git clone https://github.com/grafrap/HPC4WC-overlapping.git
+cd HPC4WC-overlapping
+```
+
+Create conda environment
+Please follow the environment creation of the course under 
+https://github.com/ofuhrer/HPC4WC/blob/main/setup/01-getting-started.pdf
+
+Please make sure that the environment is activated and then install the required packages for this project
+
+``` bash
+pip install -r requirements.txt
+```
+
+
+
+
+### 2. Building the Code
+
+The project uses CMake for building. On systems with CUDA:
+
+```bash
+# Create build directory
+mkdir build
+cd build
+
+# Configure with CUDA (adjust CUDA path as needed and make sure that cmake finds nvcc)
+cmake -DCUDAToolkit_ROOT=/opt/nvidia/hpc_sdk/Linux_aarch64/24.3/cuda/12.3 ..
+
+# if this cmake command fails, please use /usr/bin/cmake instead of cmake 
+
+# Build all targets
+make
+
+# Available executables:
+# - stencil2d_cpu         (CPU baseline)
+# - stencil2d_gpu         (Single-stream GPU)
+# - stencil2d_gpu_streams (Multi-stream GPU)
+# - arccos_cuda           (Arccos performance tests)
+```
+
+### 3. Running Tests
+
+# TODO: ADD DESCRIPTION FOR ARCCOS TESTS
+
+Validate stencil implementations with the automated test suite:
+
+```bash
+cd tests
+./test_stencil.sh
+```
+
+This script:
+- Builds the CPU and GPU implementations
+- Runs baseline CPU version
+- Tests GPU versions with different stream counts
+- Validates numerical correctness between implementations
+
+
+## Usage
+
+### Stencil Diffusion Operations
+
+#### CPU Baseline
+```bash
+./stencil2d_cpu -nx 128 -ny 128 -nz 64 -iter 100
+```
+
+#### Single-Stream GPU
+```bash
+./stencil2d_gpu -nx 128 -ny 128 -nz 64 -iter 100
+```
+
+#### Multi-Stream GPU
+```bash
+./stencil2d_gpu_streams -nx 128 -ny 128 -nz 64 -iter 100 -streams 8 -test false
+```
+
+**Parameters:**
+- `-nx`, `-ny`, `-nz`: Grid dimensions (excluding halo regions)
+- `-iter`: Number of diffusion iterations
+- `-streams`: Number of CUDA streams (GPU streams version only)
+- `-test`: Enable test mode for output validation (GPU streams version only), this argument is optional
+
+### Arccos Performance
+
+```bash
+./arccos_cuda 2 256 32 10 0
+```
+**Parameters**
+./arccos_cuda <num_reps> <array_size> <num_streams> <num_iter> <test_mode>
+- `num_reps`: Number of arccos repetitions on each element
+- `array_size`: Size of the input array
+- `num_streams`: Number of CUDA streams to use
+- `num_iter`: Number of iterations to run for time measurement
+- `test_mode`: If set to 1, runs in test mode (validates output correctness)
+
+Runs performance tests with varying array sizes and stream counts.
+
+## Performance Analysis
+
+### Running Benchmarks
+
+Use the provided SLURM scripts for comprehensive performance analysis:
+
+```bash
+# Submit stencil performance jobs (from the main directory)
+sbatch run-stencil_scaling.sh
+
+# Submit arccos performance jobs  (from the main directory)
+sbatch run-arccos_cuda.sh
+```
+
+### Analyzing Results
+
+Performance data is automatically saved to the `measurements/` directory. Use the Jupyter notebooks for analysis
+
+### Key Findings
+
+Based on the analysis in `measurements/cuda_plots.ipynb`:
+
+1. **Stream Effectiveness**: CUDA streams provide significant speedup (up to 1.76x) for large problem sizes
+2. **Size Dependency**: Improvements only visible for array sizes > 2^19 elements
+3. **Optimal Stream Count**: Best performance typically achieved with 8-32 streams
+4. **Problem Size Scaling**: Larger 3D grids (e.g., 512×512×64) show better scalability than smaller ones
+
+## Implementation Details
+
+### Diffusion Stencil
+
+The project implements a 2D diffusion equation using a double Laplacian stencil:
+```
+out = in - α × ∇²(∇²(in))
+```
+
+Where:
+- `∇²` is the 5-point Laplacian operator
+- `α = 1/32` is the diffusion coefficient
+- Periodic boundary conditions are applied
+
+### CUDA Kernels
+
+- **`updateHaloKernel`**: Updates periodic boundary conditions
+- **`diffusionStepKernel`**: Applies diffusion step with combined double Laplacian
+- **`compute_kernel_multiple`**: Performs chained arccos operations
+
+### Memory Management
+
+- Automatic device memory allocation/deallocation
+- Asynchronous memory transfers when using streams
+- Optimized memory access patterns for GPU performance
+
+## File I/O
+
+Input and output fields are saved in binary format:
+- `in_field.dat`: Initial field configuration
+- `out_field.dat`: Final simulation result  
+- `out_field_streams.dat`: Multi-stream result (test mode)
+
+## Performance Metrics
+
+Results are reported in CSV format with columns:
+- Problem dimensions (nx, ny, nz)
+- Number of iterations
+- Number of streams (where applicable)
+- Execution time in seconds
+
+## Requirements
+
+### System Requirements
+- NVIDIA GPU with CUDA capability
+- CUDA Toolkit (version 12.3 or compatible)
+- C++ compiler with C++11 support
+- CMake 3.18+
+
+### Python Environment
+- Python 3.11+
+- NumPy
+- Matplotlib  
+- Pandas
+- Jupyter (for analysis notebooks)
+
+## Troubleshooting
+
+### Build Issues
+- Ensure CUDA_ROOT is correctly set in build scripts
+- Check that GPU compute capability is supported
+- Verify CMake can find CUDA installation
+
+### Runtime Issues
+- Confirm sufficient GPU memory for problem size
+- Check CUDA driver compatibility
+- Validate input parameters are within reasonable ranges
