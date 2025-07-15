@@ -10,47 +10,15 @@
 
 namespace {
 
-// void updateHalo(Storage3D<double> &inField) {
-//   const int xInterior = inField.xMax() - inField.xMin();
-//   const int yInterior = inField.yMax() - inField.yMin();
-
-//   // bottom edge (without corners)
-//   for (std::size_t k = 0; k < inField.zMin(); ++k) {
-//     for (std::size_t j = 0; j < inField.yMin(); ++j) {
-//       for (std::size_t i = inField.xMin(); i < inField.xMax(); ++i) {
-//         inField(i, j, k) = inField(i, j + yInterior, k);
-//       }
-//     }
-//   }
-
-//   // top edge (without corners)
-//   for (std::size_t k = 0; k < inField.zMin(); ++k) {
-//     for (std::size_t j = inField.yMax(); j < inField.ySize(); ++j) {
-//       for (std::size_t i = inField.xMin(); i < inField.xMax(); ++i) {
-//         inField(i, j, k) = inField(i, j - yInterior, k);
-//       }
-//     }
-//   }
-
-//   // left edge (including corners)
-//   for (std::size_t k = 0; k < inField.zMin(); ++k) {
-//     for (std::size_t j = inField.yMin(); j < inField.yMax(); ++j) {
-//       for (std::size_t i = 0; i < inField.xMin(); ++i) {
-//         inField(i, j, k) = inField(i + xInterior, j, k);
-//       }
-//     }
-//   }
-
-//   // right edge (including corners)
-//   for (std::size_t k = 0; k < inField.zMin(); ++k) {
-//     for (std::size_t j = inField.yMin(); j < inField.yMax(); ++j) {
-//       for (std::size_t i = inField.xMax(); i < inField.xSize(); ++i) {
-//         inField(i, j, k) = inField(i - xInterior, j, k);
-//       }
-//     }
-//   }
-// }
-
+// Apply diffusion using a double Laplacian stencil on a 3D field
+// PRE: inField and outField are initialized Storage3D objects with dimensions x*y*z and halo width 'halo'
+//      alpha is the diffusion coefficient 
+//      numIter is the number of diffusion iterations to perform
+//      x, y, z are the interior dimensions (excluding halo)
+//      halo is the width of the halo region (must be >= 2 for the stencil)
+// POST: outField contains the result after numIter diffusion steps
+//       inField is modified during computation (contains intermediate results)
+//       Each iteration applies: out = in - alpha * laplacian(laplacian(in))
 void apply_diffusion(Storage3D<double> &inField, Storage3D<double> &outField,
                      double alpha, unsigned numIter, int x, int y, int z,
                      int halo) {
@@ -91,6 +59,12 @@ void apply_diffusion(Storage3D<double> &inField, Storage3D<double> &outField,
   }
 }
 
+// Report timing results in a format suitable for analysis
+// PRE: storage is a valid Storage3D object
+//      nIter is the number of iterations performed
+//      diff is the elapsed time in seconds
+// POST: Outputs timing data to stdout in numpy array format
+//       Format: [num_ranks, nx, ny, nz, num_iter, time]
 void reportTime(const Storage3D<double> &storage, int nIter, double diff) {
   std::cout << "# ranks nx ny nz num_iter time\ndata = np.array( [ \\\n";
   int size;
@@ -101,6 +75,11 @@ void reportTime(const Storage3D<double> &storage, int nIter, double diff) {
 }
 } // namespace
 
+// Main function: Parse command line arguments and run diffusion simulation
+// Expected arguments: program -nx <x> -ny <y> -nz <z> -iter <iterations>
+// PRE: argc >= 9 and argv contains valid integer arguments for dimensions and iterations
+// POST: Writes input field to "in_field.dat", runs diffusion simulation,
+//       writes output field to "out_field.dat", and reports timing results
 int main(int argc, char const *argv[]) {
 #ifdef CRAYPAT
   PAT_record(PAT_STATE_OFF);
