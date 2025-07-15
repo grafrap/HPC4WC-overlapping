@@ -33,6 +33,18 @@ def extract_data(filename):
                     except Exception as e:
                         print(f"Skipping line (parsing error): {line}")
                     colnames = ["Calls", "Size", "NUM_STREAMS", "Time"]
+                elif len(parts) == 7:
+                    try:
+                        nx = int(parts[1])
+                        ny = int(parts[2])
+                        nz = int(parts[3])
+                        num_iter = int(parts[4])
+                        time = float(parts[5])
+                        num_streams = int(parts[6])
+                        data.append((nx, ny, nz, num_iter, num_streams, time))
+                    except Exception as e:
+                        print(f"Skipping line (parsing error): {line}")
+                    colnames = ["Nx", "Ny", "Nz", "NUM_ITER", "NUM_STREAMS", "Time"]
     return pd.DataFrame(data, columns=colnames)
     
 
