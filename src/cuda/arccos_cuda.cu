@@ -13,13 +13,6 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 #include "arccos_cuda.cuh"
 
 
-
-
-__global__ void compute_kernel_once(fType* d_data, int size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < size) d_data[idx] = std::acos(d_data[idx]);
-}
-
 __global__ void compute_kernel_multiple(fType* d_data, int size, int num_arcos_calls) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < size) {
