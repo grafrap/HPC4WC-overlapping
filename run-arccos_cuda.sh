@@ -21,13 +21,24 @@ export PATH=${CUDA_ROOT}/bin:$PATH
 export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 
 # Use system cmake and set CUDA toolkit root
-/usr/bin/cmake -DCUDAToolkit_ROOT=${CUDA_ROOT} -DCMAKE_CUDA_COMPILER=${CUDA_ROOT}/bin/nvcc ..
+/usr/bin/cmake -DCUDAToolkit_ROOT=${CUDA_ROOT} ..
 make clean
 make
 
 
-# warm up run
-./cuda_arccos 1 1024 4 10 1 > /dev/null
+# warm up run with verification
+WARMUPOUT_FILE="../measurements/warmup_cuda_${JOB_ID}.out"
+WARMUPERR_FILE="../measurements/warmup_cuda_${JOB_ID}.err"
+./cuda_arccos 1 1024 4 10 1 >> $WARMUPOUT_FILE 2>> $WARMUPERR_FILE
+
+# Check for errors in the warmup run
+if grep -q "There were errors in the results or there was a runtime error." "$WARMUPERR_FILE"; then
+    echo "Warm-up run failed. See $WARMUPERR_FILE for details."
+    exit 1
+else
+    echo "Warm-up run completed successfully."
+fi
+
 
 # Create a timestamp for output file if not running via SLURM
 if [ -z "$SLURM_JOB_ID" ]; then
