@@ -58,6 +58,7 @@ do
                 SIZE=$((2**k))
                 # echo "Testing array size: $SIZE with $((2**i)) streams and $REPS repetitions" | tee -a $OUTPUT_FILE
                 ./cuda_arccos $REPS $SIZE $((2**i)) 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
+
                 # ./cuda_arccos $SIZE 4 10 >> $OUTPUT_FILE 2>> $ERROR_FILE
             done
         done

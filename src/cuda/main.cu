@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
     }
 
     if (size % num_streams != 0) {
-        std::cerr << "Size must be divisible by number of streams." << std::endl;
+        std::cerr << "Size (" << size << ") must be divisible by number of streams (" << num_streams << ")." << std::endl;
         return 1;
     }
 
@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < num_repetitions; ++i) {
         // std::cerr << "Repetition " << (i + 1) << " of " << num_repetitions << std::endl;
         std::chrono::duration<double> duration;
-        // std::cerr << "Running arccos computation with size: " << size << " and number of streams: " << num_streams << std::endl;
+      
         success = run_arccos(num_arccos_calls, size, num_streams, duration, h_data, h_result, h_reference, d_data, streams);
         // Check the result
         if (success == 0) {

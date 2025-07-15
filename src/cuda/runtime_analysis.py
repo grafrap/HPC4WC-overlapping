@@ -14,16 +14,26 @@ def extract_data(filename):
             if "###" in line:
                 line = line.replace("###", "")
                 parts = line.strip().split()
-                try:
-                    num_reps = int(parts[0])
-                    size = int(parts[1])
-                    num_streams = int(parts[2])
-                    time = float(parts[3])
-                    data.append((num_reps, size, num_streams, time))
-                except Exception as e:
-                    print(f"Skipping line (parsing error): {line}")
-    return pd.DataFrame(data, columns=["Num_Repetitions","Size", "Num_Streams", "Time"])
-
+                if len(parts) == 3:
+                    try:
+                        size = int(parts[0])
+                        num_streams = int(parts[1])
+                        time = float(parts[2])
+                        data.append((size, num_streams, time))
+                    except Exception as e:
+                        print(f"Skipping line (parsing error): {line}")
+                    colnames = ["Size", "NUM_STREAMS", "Time"]
+                elif len(parts) == 4:
+                    try:
+                        calls = int(parts[0])
+                        size = int(parts[1])
+                        num_streams = int(parts[2])
+                        time = float(parts[3])
+                        data.append((calls, size, num_streams, time))
+                    except Exception as e:
+                        print(f"Skipping line (parsing error): {line}")
+                    colnames = ["Calls", "Size", "NUM_STREAMS", "Time"]
+    return pd.DataFrame(data, columns=colnames)
     
 
 
