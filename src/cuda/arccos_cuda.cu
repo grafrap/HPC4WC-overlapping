@@ -12,8 +12,6 @@ nvcc -arch=sm_90 -o arccos_cuda arccos_cuda.cu
 #include "cnpy.h"
 #include "arccos_cuda.cuh"
 
-#include <cuda_profiler_api.h>
-
 
 
 
@@ -51,11 +49,9 @@ int run_arccos(int num_arccos_calls, int size, int num_streams, std::chrono::dur
     int blocks = (size_per_stream + threads - 1) / threads;
 
     // Launch operations in streams
-    cudaProfilerStart();
     auto start = std::chrono::high_resolution_clock::now();
     cudaError_t err = run_stream_operations(h_data, h_result, d_data, streams, num_arccos_calls, size_per_stream, num_streams, threads, blocks);
     auto end = std::chrono::high_resolution_clock::now();
-    cudaProfilerStop();
 
     // Calculate duration
     duration = std::chrono::duration<double>(end - start);
