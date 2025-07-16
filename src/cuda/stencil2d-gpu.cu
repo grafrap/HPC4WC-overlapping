@@ -59,7 +59,6 @@ void apply_diffusion_gpu(Storage3D<double> &inField, Storage3D<double> &outField
     
     // Calculate total halo points for 1D halo update kernel
     int xInterior = x;
-    int yInterior = y;
     int haloPointsPerZ = 2 * xInterior * halo + 2 * (y + 2 * halo) * halo;
     int totalHaloPoints = haloPointsPerZ * z;
     
@@ -166,7 +165,6 @@ int main(int argc, char const *argv[]) {
     // Update halo regions on the final output field using GPU kernel
     // (Alternative to using updateHalo(output) from utils.h)
     int xInterior = x;
-    int yInterior = y;
     int haloPointsPerZ = 2 * xInterior * nHalo + 2 * (y + 2 * nHalo) * nHalo;
     int totalHaloPoints = haloPointsPerZ * z;
     
