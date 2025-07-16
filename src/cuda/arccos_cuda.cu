@@ -17,7 +17,7 @@ __global__ void compute_kernel_multiple(fType* d_data, int size, int num_arcos_c
     if (idx < size) {
         for (int i = 0; i < num_arcos_calls; ++i) {
             // Map result to the range [-1, 1] after each arccos
-            d_data[idx] = clampf( std::acos(d_data[idx]) / M_PI, -1.0f, 1.0f );
+            d_data[idx] = clampf( (2 * std::acos(d_data[idx]) / M_PI) - 1.0f, -1.0f, 1.0f );
         }
     }
 }
@@ -108,10 +108,10 @@ void init_h_local(fType* h_data, fType* h_reference, int num_arccos_calls, int c
         h_data[j] = dis(gen);
         
         // Precompute the expected result
-        h_reference[j] = clampf( std::acos(h_data[j]) / M_PI, -1.0f, 1.0f );
+        h_reference[j] = clampf( (2 * std::acos(h_data[j]) / M_PI) - 1.0f, -1.0f, 1.0f );
         for (int k = 1; k < num_arccos_calls; ++k) {
             // Map result to the range [-1, 1] after each arccos
-            h_reference[j] = clampf( std::acos(h_reference[j]) / M_PI, -1.0f, 1.0f );
+            h_reference[j] = clampf( (2 * std::acos(h_reference[j]) / M_PI) - 1.0f, -1.0f, 1.0f );
         }
     }
 }
