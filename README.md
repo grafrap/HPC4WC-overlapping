@@ -1,6 +1,6 @@
 # HPC4WC Overlapping Performance Analysis
 
-This project analyzes the performance benefits of using CUDA streams for overlapping computation and memory operations in high-performance computing applications. It includes implementations of diffusion stencil operations and arccos computations with varying levels of parallelization.
+This project analyzes the performance benefits of using CUDA streams for overlapping computation and memory operations in high-performance computing applications. It includes implementations of diffusion stencil operations and arccos computations with varying levels of overlapping.
 
 ## Project Structure
 
@@ -46,7 +46,7 @@ git clone https://github.com/grafrap/HPC4WC-overlapping.git
 cd HPC4WC-overlapping
 ```
 
-Create conda environment
+Create conda environment.
 Please follow the environment creation of the course under 
 https://github.com/ofuhrer/HPC4WC/blob/main/setup/01-getting-started.pdf
 
@@ -85,7 +85,7 @@ make
 
 ### 3. Running Tests
 
-# TODO: ADD DESCRIPTION FOR ARCCOS TESTS
+The arccos_cuda program includes a validation step that can be manually configured through the last argument of the application (see "Usage").
 
 Validate stencil implementations with the automated test suite:
 
@@ -132,14 +132,14 @@ This script:
 ./arccos_cuda 2 256 32 10 0
 ```
 **Parameters**
-./arccos_cuda <num_reps> <array_size> <num_streams> <num_iter> <test_mode>
-- `num_reps`: Number of arccos repetitions on each element
-- `array_size`: Size of the input array
+./arccos_cuda <num_arccos_calls> <size> <num_streams> <num_repetitions> <validation_period>
+- `num_arccos_calls`: Number of chained arccos operations on each element
+- `size`: Size of the input array
 - `num_streams`: Number of CUDA streams to use
-- `num_iter`: Number of iterations to run for time measurement
-- `test_mode`: If set to 1, runs in test mode (validates output correctness)
+- `num_repetitions`: Number of iterations to run for time measurement
+- `validation_period`: Period in which results should be tested on correctness. 0 for no validaition, 1 for validation in each repetition.
 
-Runs performance tests with varying array sizes and stream counts.
+Runs performance tests with given array sizes and stream count.
 
 ## Performance Analysis
 
@@ -157,7 +157,7 @@ sbatch run-arccos_cuda.sh
 
 ### Analyzing Results
 
-Performance data is automatically saved to the `measurements/` directory. Use the Jupyter notebooks for analysis
+Performance data is automatically saved to the `measurements/` directory. Use the Jupyter notebooks for analysis.
 
 ### Key Findings
 
@@ -182,19 +182,32 @@ Where:
 - `α = 1/32` is the diffusion coefficient
 - Periodic boundary conditions are applied
 
-### CUDA Kernels
+#### CUDA Kernels
 
 - **`updateHaloKernel`**: Updates periodic boundary conditions
 - **`diffusionStepKernel`**: Applies diffusion step with combined double Laplacian
 - **`compute_kernel_multiple`**: Performs chained arccos operations
 
-### Memory Management
+#### Memory Management
 
 - Automatic device memory allocation/deallocation
 - Asynchronous memory transfers when using streams
 - Optimized memory access patterns for GPU performance
 
-## File I/O
+### Arc cosine
+
+Model problem where arc cosine evaluations are performed on GPU. Overlapping of this computation and the memory transfer between host and device memory is achived by using multiple CUDA streams.
+
+#### CUDA Kernels
+
+- **`compute_kernel_multiple`**: Applies arc cosine operations
+
+#### Memory Management
+
+- Automatic device memory allocation/deallocation
+- Asynchronous memory transfers
+
+## File I/O - Stencil
 
 Input and output fields are saved in binary format:
 - `in_field.dat`: Initial field configuration
@@ -203,11 +216,22 @@ Input and output fields are saved in binary format:
 
 ## Performance Metrics
 
+### Stencil
+
 Results are reported in CSV format with columns:
 - Problem dimensions (nx, ny, nz)
 - Number of iterations
 - Number of streams (where applicable)
 - Execution time in seconds
+
+### Arc cosine
+
+Here as well, results are reported in CSV format.
+The columns are:
+- Number of arc cosine operations per kernel call
+- Size of the data array
+- Number of streams
+- Average runtime in seconds
 
 ## Requirements
 
