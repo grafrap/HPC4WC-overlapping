@@ -6,7 +6,7 @@ int main(int argc, char** argv) {
 
     // Check command line arguments
     if (argc != 6) {
-        std::cerr << "Usage: " << argv[0] << "<num_arccos_calls> <size> <num_streams> <num_repetitions> <verification_period>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << "<num_arccos_calls> <size> <num_streams> <num_repetitions> <validation_period>" << std::endl;
         return 1;
     }
 
@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
     int size = std::atoi(argv[2]);
     int num_streams = std::atoi(argv[3]);
     int num_repetitions = std::atoi(argv[4]);
-    int verification_period = std::atoi(argv[5]);
+    int validation_period = std::atoi(argv[5]);
 
     // Validate command line arguments
     if (size <= 0 || num_streams <= 0 || num_repetitions <= 0) {
@@ -23,8 +23,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if (verification_period < 0 || verification_period > num_repetitions) {
-        std::cerr << "Verification period must be between 0 and the number of repetitions." << std::endl;
+    if (validation_period < 0 || validation_period > num_repetitions) {
+        std::cerr << "validation period must be between 0 and the number of repetitions." << std::endl;
         return 1;
     }
 
@@ -57,9 +57,9 @@ int main(int argc, char** argv) {
         std::chrono::duration<double> duration;
         success = run_arccos(num_arccos_calls, size_per_stream, num_streams, duration, h_data, h_result, d_data, streams);
 
-        // If verification period is set, verify results every verification_period repetitions
-        if (success == 0 && verification_period > 0 && i % verification_period == 0) {
-            success = verify_result(h_reference, h_result, size_per_stream, num_streams);
+        // If validation period is set, verify results every validation_period repetitions
+        if (success == 0 && validation_period > 0 && i % validation_period == 0) {
+            success = validate_result(h_reference, h_result, size_per_stream, num_streams);
         }
 
         // Check the result

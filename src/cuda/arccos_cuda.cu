@@ -153,7 +153,7 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
 }
 
 
-int verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams) {
+int validate_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams) {
     
     // Check if the results match the reference values
     for (int i = 0; i < num_streams; ++i) {

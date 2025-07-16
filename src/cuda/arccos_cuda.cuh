@@ -75,10 +75,10 @@ cudaError_t run_stream_operations(fType* h_data[], fType* h_result[], fType* d_d
                                      int threads, int blocks);
 
 
-// Verify the result of the arccos computation
+// Validate the result of the arccos computation
 // PRE: h_reference and h_result point to arrays of size "num_streams" of valid memory of size "size_per_stream".
 // POST: Returns 0 if all results are correct, otherwise returns 1.
-int verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams);
+int validate_result(fType* h_reference[], fType* h_result[], int size_per_stream, int num_streams);
 
 
 // Delete all allocated memory and destroy all streams
