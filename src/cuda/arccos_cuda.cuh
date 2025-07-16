@@ -19,6 +19,12 @@
 using fType = float;
 
 
+// Clamp function to restrict a value to a given range
+// PRE: x is the value to clamp, lower is the lower bound, upper is the upper bound
+// POST: Returns x clamped to the range [lower, upper]
+__device__ __host__ inline float clampf(float x, float lower, float upper);
+
+
 // CUDA kernel that computes the arccos(arccos) of the element at the threads index
 // PRE: d_data is allocated on the device and size is the number of elements in d_data
 // POST: d_data contains the result of num_arccos_calls chained arccos operations
@@ -47,7 +53,7 @@ int init_data(fType* h_data[], fType* h_result[], fType* h_reference[], fType* d
 // POST: h_data is filled with random values in the range [-1, 1]
 //       and h_result is filled with the expected result of "num_arccos_calls" consecutive arccos operations
 //       on the values in h_data.
-void init_h_local(fType* h_data, fType* h_result, int num_arccos_calls, int chunksize, std::mt19937 &gen, std::uniform_real_distribution<fType> &dis);
+void init_h_local(fType* h_data, fType* h_reference, int num_arccos_calls, int chunksize, std::mt19937 &gen, std::uniform_real_distribution<fType> &dis);
 
 
 // Run the arccos computation using multiple CUDA streams

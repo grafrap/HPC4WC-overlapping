@@ -2,15 +2,22 @@
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
 
 #include "arccos_cuda.cuh"
+
+
+__device__ __host__ inline float clampf(float x, float lower, float upper) {
+    return fminf(fmaxf(x, lower), upper);
+}
 
 
 __global__ void compute_kernel_multiple(fType* d_data, int size, int num_arcos_calls) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < size) {
         for (int i = 0; i < num_arcos_calls; ++i) {
-            d_data[idx] = std::acos(d_data[idx]);
+            // Map result to the range [-1, 1] after each arccos
+            d_data[idx] = clampf( std::acos(d_data[idx]) / M_PI, -1.0f, 1.0f );
         }
     }
 }
@@ -92,7 +99,7 @@ int init_data(fType* h_data[], fType* h_result[], fType* h_reference[], fType* d
 }
 
 
-void init_h_local(fType* h_data, fType* h_result, int num_arccos_calls, int chunksize, std::mt19937 &gen, std::uniform_real_distribution<fType> &dis) {
+void init_h_local(fType* h_data, fType* h_reference, int num_arccos_calls, int chunksize, std::mt19937 &gen, std::uniform_real_distribution<fType> &dis) {
     
     // Initialize data with uniform random values in the range [-1, 1]
     for (int j = 0; j < chunksize; ++j) {
@@ -101,9 +108,10 @@ void init_h_local(fType* h_data, fType* h_result, int num_arccos_calls, int chun
         h_data[j] = dis(gen);
         
         // Precompute the expected result
-        h_result[j] = std::acos(h_data[j]);
+        h_reference[j] = clampf( std::acos(h_data[j]) / M_PI, -1.0f, 1.0f );
         for (int k = 1; k < num_arccos_calls; ++k) {
-            h_result[j] = std::acos(h_result[j]);
+            // Map result to the range [-1, 1] after each arccos
+            h_reference[j] = clampf( std::acos(h_reference[j]) / M_PI, -1.0f, 1.0f );
         }
     }
 }
@@ -150,6 +158,8 @@ int verify_result(fType* h_reference[], fType* h_result[], int size_per_stream, 
     // Check if the results match the reference values
     for (int i = 0; i < num_streams; ++i) {
         for (int j = 0; j < size_per_stream; ++j) {
+            std::cerr << "Verifying stream " << i << ", index " << j << ": "
+                      << h_reference[i][j] << " vs " << h_result[i][j] << std::endl;
             if (std::fabs(h_reference[i][j] - h_result[i][j]) > 1e-3) {
                 std::cerr << "Mismatch at index " << j << " in stream " << i << ": "
                           << h_reference[i][j] << " != " << h_result[i][j] << " with a difference of " << std::fabs(h_reference[i][j] - h_result[i][j]) << std::endl;
