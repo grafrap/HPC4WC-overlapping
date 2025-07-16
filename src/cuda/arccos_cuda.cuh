@@ -22,7 +22,7 @@ using fType = float;
 __device__ __host__ inline float clampf(float x, float lower, float upper);
 
 
-// CUDA kernel that computes the arccos(arccos) of the element at the threads index
+// CUDA kernel that computes the arccos of the element at the threads index
 // PRE: d_data is allocated on the device and size is the number of elements in d_data
 // POST: d_data contains the result of num_arccos_calls chained arccos operations
 //       for the number of threads it is launched with
