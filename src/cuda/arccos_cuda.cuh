@@ -11,9 +11,6 @@
 // Define a tolerance for floating-point comparison
 #define TOL 1e-5
 
-// Debug flag (varification function)
-#define DEBUG 0
-
 
 // Define the floating-point type
 using fType = float;
