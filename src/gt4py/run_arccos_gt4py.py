@@ -1,10 +1,55 @@
-from arccos_gt4py import time_arccos_multiple_lengths
+import sys
+from arccos_gt4py import time_arccos
 import os
+import numpy as np
 
-npz_file = "build/data/ref_data.npz"
-assert(os.path.isfile(npz_file))
+print(f"{sys.argv[0]} started\n")
 
-sizes = [10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8]
+if len(sys.argv) == 2:
+    filename_csv = sys.argv[1]
+else:
+    print(f"Usage: {sys.argv[0]} <filename_csv>")
+    sys.exit(1)
 
-print("start timing")
-time_arccos_multiple_lengths(npz_file, sizes, "measurements/measurement_gt4py_.csv", number=15, repeats=3)
+# ncalls and sizes as in run-arccos_cuda.sh
+ncalls = 2**np.arange(10)
+sizes = 2**np.arange(3,30,2)
+
+# less work in case of DEBUG
+env_var_debug = os.environ.get("DEBUG")
+if env_var_debug:
+    print(f'env var "DEBUG"={env_var_debug}')
+    ncalls = 2**np.arange(4)
+    sizes = 2**np.arange(3,12,2)
+        
+    # moderate work in case of DEBUG2
+    if env_var_debug == "M":
+        ncalls = 2**np.arange(4,7)
+        sizes = 2**np.arange(11,19,2)
+    elif env_var_debug == "L":
+        ncalls = 2**np.array([7]) # np.arange(7,10)
+        sizes = 2**np.arange(19,30,2)
+
+# print(sys.getrecursionlimit())
+sys.setrecursionlimit(5000)
+# print(sys.getrecursionlimit())
+
+# warm up runs to prepare all jit functions
+print("Warm up field ops for ", end="")
+for nca in ncalls:
+    print(f"{nca}, ", end="")
+    time_arccos(nca, 1024, repeats=10, do_print=False)
+print(" arccos calls.\n")
+
+print("Start measurements:")
+results = np.empty((len(ncalls), len(sizes), 3))
+for i,nca in enumerate(ncalls):
+    for k,size in enumerate(sizes):
+        results[i,k] = time_arccos(nca, size, repeats=10)
+
+
+try:
+    np.savetxt(filename_csv, results.reshape(-1,3), delimiter=",", header="Calls,Size,Time", fmt=('%d', '%d', '%.6f'), comments="")
+    print(f"\nResults saved to {filename_csv}\n")
+except Exception as e:
+    print(f"Couldn't save to {filename_csv}.\nUnexpected error: {e}")
