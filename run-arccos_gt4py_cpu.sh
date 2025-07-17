@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=timeit_gt4py_CPU
-#SBATCH --output=build/timeit_gt4py_CPU_%j.out   # Save STDOUT to build dir
-#SBATCH --error=build/timeit_gt4py_CPU_%j.err    # Save STDERR to build dir
+#SBATCH --job-name=timeit_gt4py_cpu
+#SBATCH --output=build/timeit_gt4py_cpu_%j.out   # Save STDOUT to build dir
+#SBATCH --error=build/timeit_gt4py_cpu_%j.err    # Save STDERR to build dir
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=72              # Max CPU cores per task (adjust based on node)
 #SBATCH --time=02:00:00                 # Max runtime
@@ -17,18 +17,18 @@ mkdir -p measurements
 # Create a timestamp for output file if not running via SLURM
 if [ -z "$SLURM_JOB_ID" ]; then
     JOB_ID=$(date +%Y%m%d_%H%M%S)
-    OUTPUT_FILE="build/timeit_gt4py_${JOB_ID}.out"
-    ERROR_FILE="build/timeit_gt4py_${JOB_ID}.err"
-    CSV_FILE="measurements/timeit_gt4py_${JOB_ID}.csv"
+    OUTPUT_FILE="build/timeit_gt4py_cpu_${JOB_ID}.out"
+    ERROR_FILE="build/timeit_gt4py_cpu_${JOB_ID}.err"
+    CSV_FILE="measurements/timeit_gt4py_cpu_${JOB_ID}.csv"
 
     echo "Use the following out files for the python script:"
     echo "stdout: $OUTPUT_FILE"
     echo "stderr: $ERROR_FILE"
 else
     # When running via srun or sbatch, use absolute path from project root
-    OUTPUT_FILE="build/timeit_gt4py_$SLURM_JOB_ID.out"
-    ERROR_FILE="build/timeit_gt4py_$SLURM_JOB_ID.err"
-    CSV_FILE="measurements/timeit_gt4py_$SLURM_JOB_ID.csv"
+    OUTPUT_FILE="build/timeit_gt4py_cpu_$SLURM_JOB_ID.out"
+    ERROR_FILE="build/timeit_gt4py_cpu_$SLURM_JOB_ID.err"
+    CSV_FILE="measurements/timeit_gt4py_cpu_$SLURM_JOB_ID.csv"
 fi
 
 export USE_BACKEND="CPU"
