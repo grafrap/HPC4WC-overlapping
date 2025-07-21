@@ -3,9 +3,9 @@
 #SBATCH --output=build/timeit_gt4py_gpu_%j.out   # Save STDOUT to build dir
 #SBATCH --error=build/timeit_gt4py_gpu_%j.err    # Save STDERR to build dir
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=64              # Max CPU cores per task (adjust based on node)
+#SBATCH --cpus-per-task=72              # Max CPU cores per task (adjust based on node)
 #SBATCH --gres=gpu:1                    # Request 1 GPU
-#SBATCH --time=01:00:00                 # Max runtime
+#SBATCH --time=00:40:00                 # Max runtime
 #SBATCH --exclusive                     # Get the whole node
 
 echo "Job started on $(hostname)"
