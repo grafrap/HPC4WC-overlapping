@@ -38,7 +38,7 @@ def arccos_2tt5_times(x: IField) -> IField:
 def arccos_2tt6_times(x: IField) -> IField:
     return arccos_2tt5_times(arccos_2tt5_times(x))
 
-# @gtx.field_operator # 2^7
+# @gtx.field_operator # 2^7                          # gt4py struggles with optimizing that many nested calls in a field_operator --> exceeding recursion limit in DSL compilation
 # def arccos_2tt7_times(x: IField) -> IField:
 #     return arccos_2tt6_times(arccos_2tt6_times(x))
 
@@ -122,9 +122,9 @@ def gen_data(size):
     # ref_arccos = np.arccos(x)
     return x
 
-def time_arccos(num_arccos_calls, size, number=1, repeats=10, do_print=True):
+def time_arccos(num_arccos_calls, size, number=1, repeats=10, do_print=True, incl_transfer=True):
     """
-    Time arccos inclusive data transfer to and from the gpu for fixed size
+    Time arccos inclusive or exclusive data transfer to and from the gpu for fixed size
 
     Parameters:
         # TODO
@@ -145,8 +145,16 @@ def time_arccos(num_arccos_calls, size, number=1, repeats=10, do_print=True):
         x = gtx.as_field(data=x_np[:size], domain=domain, allocator=backend)
         test_fct(x=x, out=out_field, domain=domain)
         _ = out_field.asnumpy()
+        
+    def benchmark_notransfer():
+        test_fct(x=x_gtx, out=out_field, domain=domain)
 
-    times = timeit.repeat(benchmark, globals=globals(), repeat=repeats, number=number)
+    if incl_transfer:
+        times = timeit.repeat(benchmark, globals=globals(), repeat=repeats, number=number)
+    else:
+        x_gtx = gtx.as_field(data=x_np[:size], domain=domain, allocator=backend)
+        times = timeit.repeat(benchmark_notransfer, globals=globals(), repeat=repeats, number=number)
+        
     avg_time = np.mean(times)
     if do_print:
         # Calls, Size, NUM_STREAMS (unknown for gt4py => -1), Time
@@ -154,7 +162,7 @@ def time_arccos(num_arccos_calls, size, number=1, repeats=10, do_print=True):
     return (num_arccos_calls, size, avg_time)
     
 if __name__=="__main__":
-    if len(sys.argv) >= 3:
+    if len(sys.argv) == 3:
         num_arccos_calls = int(sys.argv[1])
         size = int(float(sys.argv[2]))
         time_arccos(num_arccos_calls, size, number=1, repeats=10)

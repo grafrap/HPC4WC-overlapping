@@ -30,6 +30,10 @@ if env_var_debug:
         ncalls = 2**np.array([7]) # np.arange(7,10)
         sizes = 2**np.arange(19,30,2)
 
+env_var_notransfer = os.environ.get("NOTRANSFER")
+incl_transfer = (env_var_notransfer is None)
+print(f"incl_transfer: {incl_transfer}")
+
 # print(sys.getrecursionlimit())
 sys.setrecursionlimit(5000)
 # print(sys.getrecursionlimit())
@@ -38,14 +42,14 @@ sys.setrecursionlimit(5000)
 print("Warm up field ops for ", end="")
 for nca in ncalls:
     print(f"{nca}, ", end="")
-    time_arccos(nca, 1024, repeats=10, do_print=False)
+    time_arccos(nca, 1024, repeats=10, do_print=False, incl_transfer=incl_transfer)
 print(" arccos calls.\n")
 
 print("Start measurements:")
 results = np.empty((len(ncalls), len(sizes), 3))
 for i,nca in enumerate(ncalls):
     for k,size in enumerate(sizes):
-        results[i,k] = time_arccos(nca, size, repeats=10)
+        results[i,k] = time_arccos(nca, size, repeats=10, incl_transfer=incl_transfer)
 
 
 try:

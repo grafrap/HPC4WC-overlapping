@@ -8,6 +8,7 @@
 #SBATCH --time=00:06:00                 # Max runtime
 #SBATCH --exclusive                     # Get the whole node
 
+
 echo "Job started on $(hostname) -> Running performance tests for gt4py"
 
 # Create directories if they don't exist
@@ -22,6 +23,7 @@ export USE_BACKEND="GPU"
 # export DEBUG=1
 export DEBUG="M"
 # export DEBUG="L"
+export NOTRANSFER=""
 
 # Run timing benchmarks
 source ~/HPC4WC_venv/bin/activate
