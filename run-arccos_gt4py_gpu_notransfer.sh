@@ -1,10 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=timeit_gt4py_cpu
-#SBATCH --output=build/timeit_gt4py_cpu_%j.out   # Save STDOUT to build dir
-#SBATCH --error=build/timeit_gt4py_cpu_%j.err    # Save STDERR to build dir
+#SBATCH --job-name=timeit_gt4py_gpu_notransfer
+#SBATCH --output=build/timeit_gt4py_gpu_notransfer_%j.out   # Save STDOUT to build dir
+#SBATCH --error=build/timeit_gt4py_gpu_notransfer_%j.err    # Save STDERR to build dir
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=72              # Max CPU cores per task (adjust based on node)
-#SBATCH --time=02:00:00                 # Max runtime
+#SBATCH --gres=gpu:1                    # Request 1 GPU
+#SBATCH --time=00:40:00                 # Max runtime
 #SBATCH --exclusive                     # Get the whole node
 
 echo "Job started on $(hostname)"
@@ -14,7 +15,7 @@ echo "Running performance tests for gt4py"
 mkdir -p build
 mkdir -p measurements
 
-VERSION="gt4py_gpu"
+VERSION="gt4py_gpu_notransfer"
 
 # Create a timestamp for output file if not running via SLURM
 if [ -z "$SLURM_JOB_ID" ]; then
@@ -29,7 +30,8 @@ OUTPUT_FILE="build/${FILENAME}.out"
 ERROR_FILE="build/${FILENAME}.err"
 CSV_FILE="measurements/${FILENAME}.csv"
 
-export USE_BACKEND="CPU"
+export USE_BACKEND="GPU"
+export NOTRANSFER=""
 
 # Run timing benchmarks
 source ~/HPC4WC_venv/bin/activate

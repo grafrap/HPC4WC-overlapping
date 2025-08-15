@@ -15,9 +15,11 @@ echo "Job started on $(hostname) -> Running performance tests for gt4py"
 mkdir -p build
 mkdir -p measurements
 
-OUTPUT_FILE="build/timeit_gt4py_DEBUG_$SLURM_JOB_ID.out"
-ERROR_FILE="build/timeit_gt4py_DEBUG_$SLURM_JOB_ID.err"
-CSV_FILE="measurements/timeit_gt4py_DEBUG_$SLURM_JOB_ID.csv"
+FILENAME="timeit_gt4py_DEBUG_$SLURM_JOB_ID"
+
+OUTPUT_FILE="build/${FILENAME}.out"
+ERROR_FILE="build/${FILENAME}.err"
+CSV_FILE="measurements/${FILENAME}.csv"
 
 export USE_BACKEND="GPU"
 # export DEBUG=1

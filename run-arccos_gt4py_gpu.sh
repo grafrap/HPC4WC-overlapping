@@ -15,22 +15,20 @@ echo "Running performance tests for gt4py"
 mkdir -p build
 mkdir -p measurements
 
+VERSION="gt4py_gpu"
+
 # Create a timestamp for output file if not running via SLURM
 if [ -z "$SLURM_JOB_ID" ]; then
     JOB_ID=$(date +%Y%m%d_%H%M%S)
-    OUTPUT_FILE="build/timeit_gt4py_gpu_${JOB_ID}.out"
-    ERROR_FILE="build/timeit_gt4py_gpu_${JOB_ID}.err"
-    CSV_FILE="measurements/timeit_gt4py_gpu_${JOB_ID}.csv"
-
-    echo "Use the following out files for the python script:"
-    echo "stdout: $OUTPUT_FILE"
-    echo "stderr: $ERROR_FILE"
+    FILENAME="timeit_${VERSION}_${JOB_ID}"
+    echo "Filenames for out and error files: $FILENAME (in build folder)"
 else
-    # When running via srun or sbatch, use absolute path from project root
-    OUTPUT_FILE="build/timeit_gt4py_gpu_$SLURM_JOB_ID.out"
-    ERROR_FILE="build/timeit_gt4py_gpu_$SLURM_JOB_ID.err"
-    CSV_FILE="measurements/timeit_gt4py_gpu_$SLURM_JOB_ID.csv"
+    FILENAME="timeit_${VERSION}_$SLURM_JOB_ID"
 fi
+
+OUTPUT_FILE="build/${FILENAME}.out"
+ERROR_FILE="build/${FILENAME}.err"
+CSV_FILE="measurements/${FILENAME}.csv"
 
 export USE_BACKEND="GPU"
 
