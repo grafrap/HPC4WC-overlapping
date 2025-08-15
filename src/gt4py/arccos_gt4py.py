@@ -122,6 +122,28 @@ def gen_data(size):
     # ref_arccos = np.arccos(x)
     return x
 
+def test_arccos(num_arccos_calls, size):
+    """
+    Validate correct results of gt4py version
+    """
+    test_fct = get_test_fct(int(num_arccos_calls))
+    x_np = gen_data(size)
+
+    two_by_pi = 2 / np.pi
+    arccos_rescaled_np = lambda x: two_by_pi * np.arccos(x) - 1
+    ref_np = x_np.copy()
+    for _ in range(num_arccos_calls):
+        ref_np = arccos_rescaled_np(x_np)
+
+    domain = gtx.domain({I: (0, size),})
+    out_field = gtx.empty(domain=domain, dtype=x_np.dtype, allocator=backend)
+
+    x = gtx.as_field(data=x_np[:size], domain=domain, allocator=backend)
+    test_fct(x=x, out=out_field, domain=domain)
+    if not np.isclose(ref_np, out_field.asnumpy()).all():
+        raise ValueError(f"ERROR: arccos results are not close enough for num calls={num_arccos_calls}, size={size}")
+        
+
 def time_arccos(num_arccos_calls, size, number=1, repeats=10, do_print=True, incl_transfer=True):
     """
     Time arccos inclusive or exclusive data transfer to and from the gpu for fixed size
