@@ -30,11 +30,13 @@ OUTPUT_FILE="build/${FILENAME}.out"
 ERROR_FILE="build/${FILENAME}.err"
 CSV_FILE="measurements/${FILENAME}.csv"
 
+# Choose backend via environment variable
 export USE_BACKEND="GPU"
 
-# Run timing benchmarks
+# Activate venv
 source ~/HPC4WC_venv/bin/activate
 
+# Run timing benchmarks
 python build/gt4py/run_arccos_gt4py.py "$CSV_FILE" >> "$OUTPUT_FILE" 2>> "$ERROR_FILE"
 
 if [[ $? -eq 1 ]]; then

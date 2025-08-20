@@ -21,15 +21,20 @@ OUTPUT_FILE="build/${FILENAME}.out"
 ERROR_FILE="build/${FILENAME}.err"
 CSV_FILE="measurements/${FILENAME}.csv"
 
-export USE_BACKEND="GPU"
+export USE_BACKEND="GPU"    # To run on GPU
+
+# With this environment variable set, the timing 
+# excludes the transfer to and from the GPU
 export NOTRANSFER=""
 
-# Run timing benchmarks
+# Activate venv
 source ~/HPC4WC_venv/bin/activate
 
+# Check Python path and version
 echo "Using Python at: $(which python)"
 python --version
 
+# Run timing benchmarks
 python build/gt4py/run_stencil2d_gt4py.py "$CSV_FILE" >> "$OUTPUT_FILE" 2>> "$ERROR_FILE"
 
 if [[ $? -eq 1 ]]; then

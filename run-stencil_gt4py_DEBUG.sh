@@ -21,19 +21,26 @@ OUTPUT_FILE="build/${FILENAME}.out"
 ERROR_FILE="build/${FILENAME}.err"
 CSV_FILE="measurements/${FILENAME}.csv"
 
+# Choose backend via environment variable
 export USE_BACKEND="GPU"
+
+# # Choose size of debug run
 # export DEBUG=1
 # export DEBUG="M" # works
 export DEBUG="L" # works
 # export DEBUG="XL" # too large
-export NOTRANSFER=""
 
-# Run timing benchmarks
+# # Uncomment if data transfer should be excluded from timing
+# export NOTRANSFER=""
+
+# Activate venv
 source ~/HPC4WC_venv/bin/activate
 
+# Check Python path and version
 echo "Using Python at: $(which python)"
 python --version
 
+# Run timing benchmarks
 python build/gt4py/run_stencil2d_gt4py.py "$CSV_FILE" >> "$OUTPUT_FILE" 2>> "$ERROR_FILE"
 
 if [[ $? -eq 1 ]]; then
