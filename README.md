@@ -18,11 +18,15 @@ HPC4WC-overlapping/
 │   │       ├── stencil2d-base.cpp       # CPU baseline implementation
 │   │       └── utils.h                  # Storage and utility classes
 │   ├── gt4py/             # GT4Py reference implementations
-│   └── reference/         # Reference implementations
+│   │   ├── arccos_gt4py.py           # GT4Py arccos implementation
+│   │   ├── run_arccos_gt4py.py       # Arccos GT4Py runner script
+│   │   ├── run_stencil2d_gt4py.py    # Stencil GT4Py runner script
+│   │   ├── stencil2d_gt4py.py        # GT4Py stencil implementation
+│   │   ├── test_arccos_gt4py.py      # GT4Py arccos tests
+│   │   └── test_timing_arccos.ipynb  # GT4Py timing analysis notebook
 ├── tests/                 # Test scripts and validation
 │   ├── test_stencil.sh   # Automated stencil testing script
 │   ├── comparison.py     # Output validation script
-│   └── build_tests/      # Test build directory
 ├── measurements/          # Performance data and analysis
 │   ├── cuda_plots.ipynb  # Performance visualization notebooks
 │   ├── *.csv             # Raw performance data
