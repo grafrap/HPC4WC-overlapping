@@ -29,6 +29,8 @@ HPC4WC-overlapping/
 │   ├── comparison.py     # Output validation script
 ├── measurements/          # Performance data and analysis
 │   ├── cuda_plots.ipynb  # Performance visualization notebooks
+│   ├── arccos_cuda_vs_gt4py_plots.ipynb   # Performance comparison to GT4Py
+│   ├── stencil_cuda_vs_gt4py_plots.ipynb  # Performance comparison to GT4Py
 │   ├── *.csv             # Raw performance data
 │   └── *.pdf             # Generated plots
 ├── report/               # Project documentation and reports
