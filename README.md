@@ -18,11 +18,15 @@ HPC4WC-overlapping/
 │   │       ├── stencil2d-base.cpp       # CPU baseline implementation
 │   │       └── utils.h                  # Storage and utility classes
 │   ├── gt4py/             # GT4Py reference implementations
-│   └── reference/         # Reference implementations
+│   │   ├── arccos_gt4py.py           # GT4Py arccos implementation
+│   │   ├── run_arccos_gt4py.py       # Arccos GT4Py runner script
+│   │   ├── run_stencil2d_gt4py.py    # Stencil GT4Py runner script
+│   │   ├── stencil2d_gt4py.py        # GT4Py stencil implementation
+│   │   ├── test_arccos_gt4py.py      # GT4Py arccos tests
+│   │   └── test_timing_arccos.ipynb  # GT4Py timing analysis notebook
 ├── tests/                 # Test scripts and validation
 │   ├── test_stencil.sh   # Automated stencil testing script
 │   ├── comparison.py     # Output validation script
-│   └── build_tests/      # Test build directory
 ├── measurements/          # Performance data and analysis
 │   ├── cuda_plots.ipynb  # Performance visualization notebooks
 │   ├── *.csv             # Raw performance data
@@ -159,15 +163,6 @@ sbatch run-arccos_cuda.sh
 
 Performance data is automatically saved to the `measurements/` directory. Use the Jupyter notebooks for analysis.
 
-### Key Findings
-
-Based on the analysis in `measurements/cuda_plots.ipynb`:
-
-1. **Stream Effectiveness**: CUDA streams provide significant speedup (up to 1.76x) for large problem sizes
-2. **Size Dependency**: Improvements only visible for array sizes > 2^19 elements
-3. **Optimal Stream Count**: Best performance typically achieved with 8-32 streams
-4. **Problem Size Scaling**: Larger 3D grids (e.g., 512×512×64) show better scalability than smaller ones
-
 ## Implementation Details
 
 ### Diffusion Stencil
@@ -244,9 +239,18 @@ The columns are:
 ### Python Environment
 - Python 3.11+
 - NumPy
-- Matplotlib  
 - Pandas
-- Jupyter (for analysis notebooks)
+- Matplotlib
+- CuPy (CUDA 12.x) >= 13.4.1
+- MPI4Py >= 4.1.0
+- Jupyter >= 1.1.1
+- IPykernel >= 6.29.5
+- IPCmagic-CSCS >= 1.1.0
+- Bash Kernel >= 0.10.0
+- Traitlets >= 4.3.1
+- IPython
+- JupyterLab Launcher >= 0.5.0
+- GT4Py (GridTools for Python)
 
 ## Troubleshooting
 
