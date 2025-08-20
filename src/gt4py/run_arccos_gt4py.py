@@ -22,7 +22,7 @@ if env_var_debug:
     ncalls = 2**np.arange(4)
     sizes = 2**np.arange(3,12,2)
         
-    # moderate work in case of DEBUG2
+    # moderate and big debug configuration:
     if env_var_debug == "M":
         ncalls = 2**np.arange(4,7)
         sizes = 2**np.arange(11,19,2)
@@ -34,9 +34,8 @@ env_var_notransfer = os.environ.get("NOTRANSFER")
 incl_transfer = (env_var_notransfer is None)
 print(f"incl_transfer: {incl_transfer}")
 
-# print(sys.getrecursionlimit())
+# higher recursion limit was necessary to compile the nested arccos calls with GT4Py
 sys.setrecursionlimit(5000)
-# print(sys.getrecursionlimit())
 
 # warm up runs to prepare all jit functions
 print("Warm up field ops for ", end="")

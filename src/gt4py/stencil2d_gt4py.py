@@ -1,8 +1,9 @@
 # ******************************************************
 #     Program: stencil2d-gt4py
 #      Author: HPC4WC
-#        Date: 11.06.2025
 # Description: GT4Py next implementation of 4th-order diffusion
+#
+#     Changes: Added 'time_stencil' (Philipp Stark)
 # ******************************************************
 from typing import Callable
 import time

@@ -14,7 +14,7 @@ else:
 # iters, zsizes, nxy as in stencil_gpu_scaling_265510.csv
 iters = 2**np.arange(5,11)
 zsizes = 2**np.arange(3,14)
-# zsizes = 2**np.arange(3,17) # too large --> crashes
+# zsizes = 2**np.arange(3,17) # too large for GPU memory --> crashes
 nxy = 128
 
 # less work in case of DEBUG
@@ -31,16 +31,11 @@ if env_var_debug:
     elif env_var_debug == "L": # works
         iters = 2**np.arange(10,11)
         zsizes = 2**np.arange(12,14)
-    elif env_var_debug == "XL": # too large
+    elif env_var_debug == "XL": # too large -> crashed
         iters = 2**np.arange(10,11)
         zsizes = 2**np.arange(13,15)
-    # elif env_var_debug == "XL_2": # too large
-    #     iters = 2**np.arange(10,11)
-    #     zsizes = 2**np.arange(14,16)
-    # elif env_var_debug == "XL_1": # too large
-    #     iters = 2**np.arange(10,11)
-    #     zsizes = 2**np.arange(14,17)
 
+# make timing with or without the data transfer to and from GPU based on environment variable
 env_var_notransfer = os.environ.get("NOTRANSFER")
 incl_transfer = (env_var_notransfer is None)
 print(f"incl_transfer: {incl_transfer}")
@@ -57,9 +52,10 @@ for i,nz in enumerate(zsizes):
 
 
 try:
-    """ # TODO:
-    ranks, nx, ny, nz, num_iter, time, num_streams
-    ###1, 128, 128, 8, 32, 0.00198136, 1
+    """
+    # write to csv in the following form:
+    Nx,Ny,Nz,NUM_ITER,Time
+    128, 128, 8, 32, 0.363128
     ...
     """
     np.savetxt(filename_csv, results.reshape(-1,5), delimiter=",", header="Nx,Ny,Nz,NUM_ITER,Time", fmt=('%d', '%d', '%d', '%d', '%.6f'), comments="")
