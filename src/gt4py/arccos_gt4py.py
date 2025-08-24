@@ -138,7 +138,7 @@ def test_arccos(num_arccos_calls, size):
     arccos_rescaled_np = lambda x: two_by_pi * np.arccos(x) - 1
     ref_np = x_np.copy()
     for _ in range(num_arccos_calls):
-        ref_np = arccos_rescaled_np(x_np)
+        ref_np = arccos_rescaled_np(ref_np)
 
     domain = gtx.domain({I: (0, size),})
     out_field = gtx.empty(domain=domain, dtype=x_np.dtype, allocator=backend)
@@ -146,7 +146,8 @@ def test_arccos(num_arccos_calls, size):
     x = gtx.as_field(data=x_np[:size], domain=domain, allocator=backend)
     test_fct(x=x, out=out_field, domain=domain)
     if not np.isclose(ref_np, out_field.asnumpy()).all():
-        raise ValueError(f"ERROR: arccos results are not close enough for num calls={num_arccos_calls}, size={size}")
+        max_abs_err = np.max(np.abs(ref_np - out_field.asnumpy()))
+        raise ValueError(f"ERROR: arccos results are not close enough for num calls={num_arccos_calls}, size={size} (max. abs. error: {max_abs_err})")
         
 
 def time_arccos(num_arccos_calls, size, number=1, repeats=10, do_print=True, incl_transfer=True):
