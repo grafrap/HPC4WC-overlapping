@@ -10,6 +10,7 @@ import time
 import timeit
 import os
 
+import struct
 import click
 import gt4py.next as gtx
 import matplotlib.pyplot as plt
@@ -293,16 +294,63 @@ def time_stencil(nx, ny, nz, num_iter, num_halo=2, number=1, repeats=10, verbose
 
     # time the actual work
     times = timeit.repeat(benchmark if incl_transfer else benchmark_notransfer, globals=globals(), repeat=repeats, number=number)
-    # if incl_transfer:
-    #     times = timeit.repeat(benchmark, globals=globals(), repeat=repeats, number=number)
-    # else:
-    #     times = timeit.repeat(benchmark_notransfer, globals=globals(), repeat=repeats, number=number)
         
     avg_time = np.mean(times)
     if verbose:
         # Field dimensions (nx,ny,nz), iterations, time, (unknown for gt4py => -1)
         print(f"{nx}, {ny}, {nz}, {num_iter}, {avg_time}, -1")
     return (nx, ny, nz, num_iter, avg_time)
+
+
+def write_field_file(filename, field, halosize=0, three=3, sixtyfour=64):
+    """
+    Write a binary field file compatible with read_field_file from comparison.py
+    field: numpy array of shape (zsize, ysize, xsize)
+    """
+    zsize, ysize, xsize = field.shape
+    header = struct.pack('6i', three, sixtyfour, halosize, xsize, ysize, zsize)
+    # Flatten in C order
+    data = field.flatten(order='C')
+    data_bytes = struct.pack(f'{data.size}d', *data)
+    with open(filename, 'wb') as f:
+        f.write(header)
+        f.write(data_bytes)
+
+def store_for_comparison(filename, nx=128, ny=128, nz=64, num_iter=512, num_halo=3):
+    """
+    save result to compare with CUDA version
+    """
+    alpha = 1.0 / 32.0
+
+    # define domain
+    field_domain = {
+        I: (-num_halo, nx + num_halo),
+        J: (-num_halo, ny + num_halo),
+        K: (0, nz),
+    }
+
+    # allocate input and output fields
+    in_field = gtx.zeros(field_domain, dtype=gtx.float64, allocator=backend)
+    out_field = gtx.zeros(field_domain, dtype=gtx.float64, allocator=backend)
+
+    # prepare input field
+    in_field[
+        num_halo + nx // 4 : num_halo + 3 * nx // 4,
+        num_halo + ny // 4 : num_halo + 3 * ny // 4,
+        nz // 4 : 3 * nz // 4,
+    ] = 1.0
+
+    apply_diffusion(
+        diffusion_stencil,
+        in_field,
+        out_field,
+        alpha,
+        num_halo,
+        num_iter=num_iter,
+    )
+
+    out_np = out_field.asnumpy()
+    write_field_file(filename, out_np, halosize=num_halo)
 
 if __name__ == "__main__":
     main()
