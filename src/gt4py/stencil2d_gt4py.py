@@ -307,10 +307,13 @@ def write_field_file(filename, field, halosize=0, three=3, sixtyfour=64):
     Write a binary field file compatible with read_field_file from comparison.py
     field: numpy array of shape (zsize, ysize, xsize)
     """
-    zsize, ysize, xsize = field.shape
+    xsize, ysize, zsize = field.shape
+    
+    # Swap axes to (zsize, ysize, xsize)
+    field_swapped = np.swapaxes(field, 0, 2)
+    
     header = struct.pack('6i', three, sixtyfour, halosize, xsize, ysize, zsize)
-    # Flatten in C order
-    data = field.flatten(order='C')
+    data = field_swapped.flatten(order='C')
     data_bytes = struct.pack(f'{data.size}d', *data)
     with open(filename, 'wb') as f:
         f.write(header)
@@ -333,12 +336,16 @@ def store_for_comparison(filename, nx=128, ny=128, nz=64, num_iter=512, num_halo
     in_field = gtx.zeros(field_domain, dtype=gtx.float64, allocator=backend)
     out_field = gtx.zeros(field_domain, dtype=gtx.float64, allocator=backend)
 
-    # prepare input field
+    # prepare input field (initial conditions as used in C++/CUDA code)
     in_field[
-        num_halo + nx // 4 : num_halo + 3 * nx // 4,
-        num_halo + ny // 4 : num_halo + 3 * ny // 4,
+        1 + nx // 4 : 2 * num_halo - 1 + 3 * nx // 4,
+        1 + ny // 4 : 2 * num_halo - 1 + 3 * ny // 4,
         nz // 4 : 3 * nz // 4,
     ] = 1.0
+
+    if 'out' in filename:
+        in_np = in_field.asnumpy()
+        write_field_file(filename.replace('out', 'in'), in_np, halosize=num_halo)
 
     apply_diffusion(
         diffusion_stencil,
